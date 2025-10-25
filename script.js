@@ -85,7 +85,7 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // *** การแก้ไขสำคัญ: เปลี่ยนพารามิเตอร์ของ URL ปัจจุบัน เพื่อให้หน้า Frontend รีโหลดและเริ่ม Geofence Check ***
+                // เปลี่ยนพารามิเตอร์ของ URL ปัจจุบัน (GitHub) เพื่อให้หน้า Frontend รีโหลดและเริ่ม Geofence Check
                 window.location.href = `?studio=${encodeURIComponent(name)}`;
             });
             
@@ -155,7 +155,7 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
-                 // **เมื่อสำเร็จจึง Redirect ไปที่ Google Form**
+                 // เมื่อสำเร็จจึง Redirect ไปที่ Google Form
                  window.top.location.href = this.target.url;
             }, 1000);
 
