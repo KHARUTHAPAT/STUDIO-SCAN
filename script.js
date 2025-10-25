@@ -19,7 +19,7 @@ class GeofenceApp {
         this.modalLoader = document.getElementById('modalLoader'); 
 
         // Configuration 
-        // ***** URL Apps Script ล่าสุดของคุณ *****
+        // URL Apps Script ล่าสุดของคุณ
         this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyCK4V914p1zGnJraiR9WQjyOMZ18nCN83DcYteQFCbinPbMTs_YvtzP9kuNOKin5UT/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
@@ -38,7 +38,6 @@ class GeofenceApp {
 
     init() {
         this.bindEvents();
-        // ***** FIX: โหลดประกาศก่อนเสมอ เมื่อเสร็จจะเรียก continueAppFlow() *****
         this.loadAnnouncement(); 
     }
 
@@ -69,12 +68,11 @@ class GeofenceApp {
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
         
          if (this.studioName) {
-            // *** การแก้ไข: แสดง UI Geofence Checker ก่อน แล้วค่อยเริ่มเรียก API ***
+            // *** FIX: หน่วงเวลา 300ms ก่อนเริ่ม Geofence Process ***
             this.showGeofenceChecker();
             
-            // หน่วงเวลา 300ms ให้ UI แสดงผลสมบูรณ์ก่อนเริ่ม Geofence Check
             setTimeout(() => {
-                this.fetchGeofenceConfig();
+                this.fetchGeofenceConfig(); 
             }, 300); 
             
         } else {
@@ -136,8 +134,7 @@ class GeofenceApp {
             
             newButton.innerHTML = `
                 <div class="button-bg"></div>
-                <span class="button-text">${name === 'ประกาศ' ? name : 'เข้าสู่ ' + name}</span>
-                <div class="button-glow"></div>
+                <span class="button-text">${name}</span> <div class="button-glow"></div>
             `;
 
             newButton.addEventListener('click', () => {
@@ -219,7 +216,7 @@ class GeofenceApp {
         this.announcementModalOverlay.classList.remove('show');
         setTimeout(() => {
             this.announcementModalOverlay.style.display = 'none';
-            this.continueAppFlow(); // เรียก continueAppFlow เมื่อ Modal ถูกปิด
+            this.continueAppFlow(); 
         }, 300); 
     }
 
@@ -254,7 +251,6 @@ class GeofenceApp {
                 this.target.dist = result.maxDist;
                 this.target.url = result.formUrl;
                 
-                // *** เริ่มการขอตำแหน่งจริง ***
                 this.checkGeolocation(); 
             } else {
                 this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
