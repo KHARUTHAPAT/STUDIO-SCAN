@@ -20,7 +20,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfqs2wOjiShnLu1hf7TtWYtRMNm8tQ__O-IpaJ0NPLT0d-hvC5ZihUrDZBlYO3CxtX/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzObYDke96Xn19aqriJAzeRYCAQeMPONNxpvMyvubBz435uHKa1LpTpC_C7bu835pQ/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -42,7 +42,6 @@ class GeofenceApp {
     }
 
     bindEvents() {
-        // เมื่อกดปุ่ม Retry ให้เรียก checkGeolocation() ซ้ำ
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
@@ -69,8 +68,11 @@ class GeofenceApp {
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
         
          if (this.studioName) {
-            this.showGeofenceChecker();
-            this.fetchGeofenceConfig(); 
+            // *** NEW LOGIC: หน่วง 1 วินาที ก่อนเริ่ม Geofence Check ***
+            setTimeout(() => {
+                this.showGeofenceChecker();
+                this.fetchGeofenceConfig(); 
+            }, 1000); // 1 วินาที
         } else {
             this.showMainMenu();
             this.setupMenuButtons();
@@ -119,7 +121,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Announcement Logic (พร้อม Timeout) ---
+    // --- Announcement Logic ---
 
     async loadAnnouncement() {
         if (!this.announcementModalOverlay) {
@@ -152,7 +154,7 @@ class GeofenceApp {
                 // ตั้งค่า src เพื่อให้เริ่มโหลด
                 this.announcementImage.src = result.imageUrl.trim(); 
                 
-                // **** NEW: ตั้งค่า Timeout 5 วินาที (ป้องกันการค้าง) ****
+                // **** Timeout 5 วินาที (ป้องกันการค้าง) ****
                 const loadTimeout = setTimeout(() => {
                     if (this.modalLoader.style.display !== 'none' && this.announcementImage.style.display === 'none') {
                         console.warn("Announcement load timeout. Skipping image and continuing flow.");
@@ -194,7 +196,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic ---
+    // --- Geofencing Logic (ไม่เปลี่ยนแปลง) ---
 
     async fetchGeofenceConfig() {
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
@@ -296,7 +298,7 @@ class GeofenceApp {
         const dLon = toRad(lon2 - lon1);
         const lat1Rad = toRad(lat1);
         const lat2Rad = toRad(lat2);
-        const a = Math.sin(dLat / 2) * Math.sin(dDat / 2) +
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                   Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
         return R * c;
