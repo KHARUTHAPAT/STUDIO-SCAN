@@ -7,9 +7,17 @@
     
     <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
     
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css"> 
     <style>
-        /* CSS เพิ่มเติมที่จำเป็นสำหรับ Geofencing/Status Card */
+        /* ============================================== */
+        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน (แก้ไขแล้ว) */
+        /* ============================================== */
+        html, body {
+            height: 100%;
+            overflow: hidden !important; 
+        }
+        
+        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card (โค้ดเดิม) */
         .status-card {
             background: rgba(15, 15, 20, 0.95);
             backdrop-filter: blur(20px);
@@ -64,7 +72,7 @@
             min-height: 55px;
         }
         
-        /* สไตล์สำหรับ Geofencing Status Card (ถูกซ่อนไว้เมื่อเป็นเมนู) */
+        /* สไตล์สำหรับ Geofencing Status Card */
         #geofenceChecker {
             display: none;
             width: 100%;
@@ -85,11 +93,11 @@
             justify-content: center;
             opacity: 0;
             transition: opacity 0.3s ease;
-            pointer-events: none; /* ซ่อนและปิด interaction */
+            pointer-events: none;
         }
         .neural-modal-overlay.show {
             opacity: 1;
-            pointer-events: auto; /* เปิด interaction เมื่อแสดง */
+            pointer-events: auto;
         }
         .neural-modal-content {
             background: rgba(15, 15, 20, 0.95);
