@@ -20,7 +20,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzObYDke96Xn19aqriJAzeRYCAQeMPONNxpvMyvubBz435uHKa1LpTpC_C7bu835pQ/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyGIBkHlSKhiiB2wxdUTniS48zNx3C4nByYSUImvXfTMwxukir9sNCD0T7L9LT__3rp/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -77,6 +77,7 @@ class GeofenceApp {
     }
 
     // --- UI/Mode Handlers ---
+
     showMainMenu() {
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
@@ -117,7 +118,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Announcement Logic (การแก้ไข Timeout) ---
+    // --- Announcement Logic ---
 
     async loadAnnouncement() {
         if (!this.announcementModalOverlay) {
@@ -140,7 +141,7 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.imageUrl && result.imageUrl.trim() !== '') {
-                // โหลดรูปภาพสำเร็จ: แสดง Modal และ Loader
+                // แสดง Modal และ Loader
                 this.announcementModalOverlay.style.display = 'flex'; 
                 this.modalLoader.style.display = 'flex'; // แสดง Loader ทันที
                 setTimeout(() => {
@@ -151,8 +152,7 @@ class GeofenceApp {
                 this.announcementImage.src = result.imageUrl.trim(); 
                 
                 // **** NEW: ตั้งค่า Timeout 5 วินาที ****
-                setTimeout(() => {
-                    // ตรวจสอบว่า Loader ยังอยู่หรือไม่ (หมายถึงรูปภาพยังโหลดไม่เสร็จ/ค้าง)
+                const loadTimeout = setTimeout(() => {
                     if (this.modalLoader.style.display !== 'none' && this.announcementImage.style.display === 'none') {
                         console.warn("Announcement load timeout. Skipping image and continuing flow.");
                         this.announcementImage.src = ''; // ยกเลิกการโหลด
@@ -161,6 +161,20 @@ class GeofenceApp {
                     }
                 }, 5000); // 5 วินาที
                 
+                // เคลียร์ timeout เมื่อรูปโหลดสำเร็จ/ล้มเหลว
+                this.announcementImage.onload = () => {
+                    clearTimeout(loadTimeout);
+                    this.modalLoader.style.display = 'none';
+                    this.announcementImage.style.display = 'block';
+                };
+
+                this.announcementImage.onerror = () => {
+                    clearTimeout(loadTimeout);
+                    this.modalLoader.style.display = 'none';
+                    this.closeAnnouncementModal();
+                };
+
+
             } else {
                 // โหลดไม่สำเร็จ/ไม่มีรูป: ไปที่ Flow หลักต่อ
                 this.continueAppFlow();
