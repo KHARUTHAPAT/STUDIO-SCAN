@@ -17,9 +17,32 @@
             overflow: hidden !important; 
         }
         
-        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
+        /* Global Loader Styles */
+        #globalLoader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8fafc; /* สีขาวเหมือนหน้า Menu */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        #globalLoader .neural-spinner {
+            /* ใช้สไตล์เดียวกับ Spinner ใน Modal แต่สีน้ำเงินเพื่อความโดดเด่น */
+            width: 60px; 
+            height: 60px;
+        }
+        #globalLoader .spinner-segment {
+             background: #3b82f6;
+        }
+
+        /* CSS อื่นๆ ที่จำเป็นสำหรับ UI หลัก (คงเดิม) */
         .status-card {
-            background: #ffffff; 
+            background: #ffffff;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -145,8 +168,8 @@
         .modal-body {
             padding: 0; 
             line-height: 0; 
-            position: relative; /* สำคัญสำหรับ Loader */
-            min-height: 150px; /* ขั้นต่ำเพื่อให้เห็น Loader */
+            position: relative; 
+            min-height: 150px; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -163,7 +186,7 @@
             display: none; 
         }
 
-        /* NEW: สไตล์สำหรับ Modal Loader */
+        /* Modal Loader Styles */
         #modalLoader {
             position: absolute;
             top: 50%;
@@ -176,13 +199,13 @@
             gap: 4px;
             align-items: center;
             justify-content: center;
-            width: 40px; /* ทำให้ Spinner ใหญ่ขึ้น */
+            width: 40px; 
             height: 40px;
         }
         .spinner-segment {
-            width: 6px; /* ทำให้แท่งใหญ่ขึ้น */
-            height: 25px; /* ทำให้แท่งยาวขึ้น */
-            background: #3b82f6; /* สีน้ำเงิน */
+            width: 6px; 
+            height: 25px; 
+            background: #3b82f6; 
             border-radius: 3px;
             animation: neuralSpinner 1.2s ease-in-out infinite;
         }
@@ -190,14 +213,20 @@
         .spinner-segment:nth-child(3) { animation-delay: 0.2s; }
 
         @keyframes neuralSpinner {
-            0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+            0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.8; }
             40% { transform: scaleY(1); opacity: 1; }
         }
-        /* END NEW */
-
     </style>
 </head>
 <body class="light-mode">
+    <div id="globalLoader">
+        <div class="neural-spinner">
+            <div class="spinner-segment"></div>
+            <div class="spinner-segment"></div>
+            <div class="spinner-segment"></div>
+        </div>
+    </div>
+    
     <div class="neural-background">
         <div class="neural-node"></div>
         <div class="neural-node"></div>
@@ -251,14 +280,15 @@
             <div class="login-header" style="margin-bottom: 10px; text-align: center;">
             </div>
             
-            <div id="modalLoader" class="neural-spinner">
+            <div id="modalLoader" class="neural-spinner" style="display:none;"> 
                 <div class="spinner-segment"></div>
                 <div class="spinner-segment"></div>
                 <div class="spinner-segment"></div>
             </div>
             
             <div class="modal-body">
-                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;"> </div>
+                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
+            </div>
         </div>
     </div>
 
