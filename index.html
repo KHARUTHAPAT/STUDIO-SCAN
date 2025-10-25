@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="style.css">
     <style>
         /* ============================================== */
-        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
+        /* CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
         /* ============================================== */
         html, body {
             height: 100%;
@@ -18,12 +18,12 @@
         }
         
         /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
-        /* **สีจะถูกกำหนดใน style.css เพื่อให้สลับโทนได้ง่าย** */
+        /* สีจะถูกกำหนดใน style.css ให้เป็นโทน Light Mode */
         .status-card {
-            background: rgba(15, 15, 20, 0.95);
+            background: #ffffff; /* Card: ขาว */
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             border-radius: 20px;
             padding: 40px 32px;
             position: relative;
@@ -35,14 +35,15 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
         .status-card h1 {
-            color: #f8fafc;
+            color: #000000; /* หัวข้อ: ดำ */
             font-size: 1.8rem;
             margin-bottom: 10px;
         }
         .status-card p {
-            color: #94a3b8;
+            color: #475569; /* คำบรรยาย: เทาเข้ม */
             font-size: 1rem;
             margin-bottom: 20px;
         }
@@ -100,6 +101,7 @@
             opacity: 1;
             pointer-events: auto;
         }
+        /* Modal Content ยังคงสีเข้มเพื่อให้รูปเด่น */
         .neural-modal-content {
             background: #000;
             border: none;
