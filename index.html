@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title id="pageTitle">เมนูผู้ดูแล Studio</title>
+    <title id="pageTitle">ประกาศ</title> <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
     
-    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
-    
-    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="style.css">
     <style>
         /* ============================================== */
         /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน (แก้ไขแล้ว) */
@@ -99,37 +97,52 @@
             opacity: 1;
             pointer-events: auto;
         }
+        
+        /* ***** การแก้ไขสำคัญ: ประกาศแบบเต็มจอ (Full Image Modal) ***** */
         .neural-modal-content {
-            background: rgba(15, 15, 20, 0.95);
-            padding: 25px;
-            border-radius: 15px;
-            max-width: 90vw;
-            width: 400px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            background: #000; /* พื้นหลังดำ */
+            border: 1px solid #1f1f1f; /* ขอบดำ */
+            padding: 0; /* ไม่มี Padding */
+            border-radius: 0; /* ไม่มีขอบมน */
+            max-width: 100%; 
+            width: 90vw; /* ให้กว้างเท่าที่ทำได้ */
+            height: auto;
+            max-height: 90vh;
             position: relative;
             transform: translateY(20px);
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
+            overflow: hidden;
         }
         .neural-modal-overlay.show .neural-modal-content {
              transform: translateY(0);
              opacity: 1;
         }
         .modal-close-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 5px;
-            line-height: 1;
-            transition: color 0.2s ease;
+            position: fixed; /* ใช้ fixed เพื่อให้อยู่บนสุดเสมอ */
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.15); /* ปุ่มสีขาวจางๆ */
+            border-color: #fff;
+            color: #fff;
+            z-index: 1010; /* ให้สูงกว่า Modal Content */
+            border-radius: 50%;
         }
-        .modal-close-button:hover {
-            color: #f8fafc;
+        .modal-body {
+            /* ไม่มีขอบ/padding ด้านใน */
+            padding: 0; 
+            line-height: 0; /* ลบช่องว่างใต้รูป */
+        }
+        .modal-body img {
+            width: 100%;
+            height: auto;
+            max-height: 90vh;
+            object-fit: contain; /* ให้รูปแสดงเต็มแต่ไม่ถูกตัด */
+            border-radius: 0;
+            margin-top: 0;
+        }
+        .login-header {
+            display: none; /* ซ่อน Header/Title */
         }
     </style>
 </head>
@@ -148,7 +161,7 @@
             <div class="ai-glow"></div>
             
             <div class="login-header" style="margin-bottom: 10px;">
-                <h1 style="font-size: 1.8rem;">เมนูผู้ดูแล Studio</h1>
+                <h1 style="font-size: 1.8rem;" id="menuTitle">เมนูผู้ดูแล Studio</h1>
                 <p>เลือก Studio ที่ต้องการเข้าถึง</p>
             </div>
             
@@ -185,10 +198,9 @@
                 &times;
             </button>
             <div class="login-header" style="margin-bottom: 10px; text-align: center;">
-                <h2 id="modalTitle" style="color:#f8fafc; font-size: 1.5rem;">📣 ประกาศสำคัญ 📣</h2>
-            </div>
+                </div>
             <div class="modal-body">
-                <img id="announcementImage" src="" alt="Announcement Image" style="width: 100%; height: auto; border-radius: 10px; margin-top: 5px;">
+                <img id="announcementImage" src="" alt="Announcement Image">
             </div>
         </div>
     </div>
