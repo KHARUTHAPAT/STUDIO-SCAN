@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title id="pageTitle">กำลังตรวจสอบตำแหน่ง...</title>
+    
+    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
+    
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* CSS สำหรับหน้า Geofencing Status */
+        .status-card {
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 20px;
+            padding: 40px 32px;
+            position: relative;
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .status-card h1 {
+            color: #f8fafc;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .status-card p {
+            color: #94a3b8;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-icon svg {
+            color: #3b82f6; /* สีเริ่มต้น: กำลังตรวจสอบ */
+            width: 100%;
+            height: 100%;
+        }
+
+        /* สถานะ Error */
+        .status-card.error .status-icon svg {
+            color: #ef4444;
+        }
+        .status-card.error h1 {
+            color: #ef4444;
+        }
+
+        /* สถานะ Success */
+        .status-card.success .status-icon svg {
+            color: #10b981;
+        }
+        .status-card.success h1 {
+            color: #10b981;
+        }
+        
+        /* ซ่อนส่วนที่ไม่เกี่ยวข้อง */
+        .login-container, .content-view-container { display: none; }
+    </style>
+</head>
+<body>
+    <div class="neural-background">
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+    </div>
+
+    <div class="login-container" id="mainContainerWrapper" style="display:flex;">
+        
+        <div class="status-card" id="geoStatusCard">
+            <div class="ai-glow"></div>
+            
+            <div class="status-icon" id="statusIcon">
+                <svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
+                </svg>
+            </div>
+            
+            <h1 id="statusTitle">กำลังตรวจสอบตำแหน่ง Studio...</h1> 
+            <p id="statusMessage">โปรดอนุญาตให้เข้าถึงตำแหน่ง GPS ของคุณ</p>
+
+            <button class="neural-button" id="retryButton" style="display:none; margin-bottom: 0;">
+                <div class="button-bg"></div>
+                <span class="button-text">ลองใหม่อีกครั้ง</span>
+                <div class="button-glow"></div>
+            </button>
+        </div>
+
+    </div>
+
+    <div class="neural-modal-overlay" id="announcementModalOverlay" style="display:none;">
+        <div class="login-card neural-modal-content">
+            <div class="ai-glow"></div>
+            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
+                &times;
+            </button>
+            <div class="login-header" style="margin-bottom: 10px;">
+                <h2 id="modalTitle" style="color:#f8fafc; font-size: 1.5rem;">ประกาศสำคัญ</h2>
+            </div>
+            <div class="modal-body">
+                <img id="announcementImage" src="" alt="Announcement Image" style="width: 100%; height: auto; border-radius: 10px; margin-top: 5px;">
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
