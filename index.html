@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="style.css">
     <style>
         /* ============================================== */
-        /* CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
+        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
         /* ============================================== */
         html, body {
             height: 100%;
@@ -18,8 +18,8 @@
         }
         
         /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
+        /* **สีจะถูกกำหนดใน style.css เพื่อให้สลับโทนได้ง่าย** */
         .status-card {
-            /* โทนสีจะถูกจัดการโดย class .dark-mode/.light-mode ใน style.css */
             background: rgba(15, 15, 20, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -159,7 +159,7 @@
         }
     </style>
 </head>
-<body>
+<body class="light-mode">
     <div class="neural-background">
         <div class="neural-node"></div>
         <div class="neural-node"></div>
