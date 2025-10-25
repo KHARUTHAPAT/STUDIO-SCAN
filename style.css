@@ -151,7 +151,7 @@ body.light-mode .status-icon svg {
     background: #000; 
     border: none;
     padding: 0; 
-    border-radius: 20px; 
+    border-radius: 20px; /* ขอบมนเท่า Card เมนู */
     max-width: 90vw; 
     width: 400px;
     height: auto;
@@ -198,7 +198,7 @@ body.light-mode .status-icon svg {
     height: auto;
     max-height: 90vh;
     object-fit: contain; 
-    border-radius: 20px; 
+    border-radius: 20px; /* ขอบมนเท่า Modal Card */
     margin-top: 0;
 }
 .login-header {
@@ -273,7 +273,6 @@ body.light-mode .status-icon svg {
     border-radius: 2px;
     animation: neuralSpinner 1.2s ease-in-out infinite;
 }
-/* (โค้ดส่วนที่เหลือของปุ่มถูกละไว้) */
 
 /* Mobile Responsive */
 @media (max-width: 480px) {
