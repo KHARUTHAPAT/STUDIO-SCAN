@@ -10,15 +10,16 @@
     <link rel="stylesheet" href="style.css">
     <style>
         /* ============================================== */
-        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน (แก้ไขแล้ว) */
+        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
         /* ============================================== */
         html, body {
             height: 100%;
             overflow: hidden !important; 
         }
         
-        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card (โค้ดเดิม) */
+        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
         .status-card {
+            /* โทนสีจะถูกจัดการโดย class .light-mode/.dark-mode ใน style.css */
             background: rgba(15, 15, 20, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
