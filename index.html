@@ -10,37 +10,15 @@
     <link rel="stylesheet" href="style.css">
     <style>
         /* ============================================== */
-        /* CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
+        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
         /* ============================================== */
         html, body {
             height: 100%;
             overflow: hidden !important; 
         }
         
-        /* Global Loader Styles */
-        #globalLoader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #f8fafc; /* สีขาวเหมือนหน้า Menu */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease;
-        }
-        #globalLoader .neural-spinner {
-            /* ใช้สไตล์เดียวกับ Spinner ใน Modal แต่สีน้ำเงินเพื่อความโดดเด่น */
-            width: 60px; 
-            height: 60px;
-        }
-        #globalLoader .spinner-segment {
-             background: #3b82f6;
-        }
-
-        /* CSS อื่นๆ ที่จำเป็นสำหรับ UI หลัก (คงเดิม) */
+        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
+        /* สีเริ่มต้นของ Card ถูกตั้งเป็น Light Mode ใน style.css */
         .status-card {
             background: #ffffff;
             backdrop-filter: blur(20px);
@@ -186,7 +164,7 @@
             display: none; 
         }
 
-        /* Modal Loader Styles */
+        /* NEW: สไตล์สำหรับ Modal Loader */
         #modalLoader {
             position: absolute;
             top: 50%;
@@ -205,7 +183,7 @@
         .spinner-segment {
             width: 6px; 
             height: 25px; 
-            background: #3b82f6; 
+            background: #3b82f6; /* ***** สีน้ำเงินเดิม ***** */
             border-radius: 3px;
             animation: neuralSpinner 1.2s ease-in-out infinite;
         }
@@ -219,14 +197,6 @@
     </style>
 </head>
 <body class="light-mode">
-    <div id="globalLoader">
-        <div class="neural-spinner">
-            <div class="spinner-segment"></div>
-            <div class="spinner-segment"></div>
-            <div class="spinner-segment"></div>
-        </div>
-    </div>
-    
     <div class="neural-background">
         <div class="neural-node"></div>
         <div class="neural-node"></div>
