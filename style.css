@@ -10,7 +10,7 @@ body {
     /* ใช้ฟอนต์เดิม */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
     
-    background: #f8fafc; /* ***** DEFAULT: สีขาว ***** */
+    background: #f8fafc; /* DEFAULT: สีขาว (สำหรับ Menu) */
     min-height: 100vh;
     height: 100%; /* ล็อคความสูง */
     overflow: hidden !important; /* ล็อคการเลื่อน */
@@ -24,20 +24,48 @@ body {
 }
 
 /* ============================================== */
-/* ***** โหมด LIGHT (สำหรับ Menu และ Geofence Checker) ***** */
+/* ***** โหมด DARK (สำหรับ Geofence Checker เท่านั้น) ***** */
 /* ============================================== */
 
-/* สีสำหรับ Background Nodes (ปรับให้มองเห็นบนพื้นขาว) */
-.neural-node {
-    background: #3b82f6; 
-    border-radius: 50%;
-    opacity: 0.2; 
-    animation: neuralPulse 4s ease-in-out infinite;
+/* เปลี่ยนเป็น Dark Mode เมื่อ Geofence Checker ทำงาน (พื้นหลังดำ/ข้อความขาว) */
+body.dark-mode {
+    background: #0a0a0f; /* พื้นหลัง: ดำ */
 }
-.ai-glow {
-    /* ปรับ Glow ให้มืดลงเล็กน้อยเพื่อให้เข้ากับพื้นขาว */
-    background: radial-gradient(circle, rgba(0, 0, 0, 0.05) 0%, transparent 70%);
-    /* (โค้ดส่วนที่เหลือถูกละไว้) */
+
+body.dark-mode .status-card {
+    background: rgba(15, 15, 20, 0.95); /* Card: ดำ */
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+body.dark-mode .status-card h1 {
+    color: #f8fafc; /* หัวข้อ: ขาว */
+}
+
+body.dark-mode .status-card p {
+    color: #94a3b8; /* คำบรรยาย: เทาอ่อน */
+}
+
+body.dark-mode .neural-node {
+    background: #3b82f6; 
+    opacity: 0.6;
+}
+body.dark-mode .ai-glow {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+}
+body.dark-mode .status-icon svg {
+    color: #3b82f6; 
+}
+
+/* ============================================== */
+/* ***** โหมด LIGHT (สำหรับ Menu หลัก) ***** */
+/* ============================================== */
+
+/* สีเริ่มต้นของส่วนประกอบใน Light Mode */
+.neural-node {
+    background: #3b82f6;
+    border-radius: 50%;
+    opacity: 0.2; /* opacity น้อยลงใน Light Mode */
+    animation: neuralPulse 4s ease-in-out infinite;
 }
 
 .status-card {
@@ -64,19 +92,30 @@ body {
     color: #3b82f6; /* Icon สีน้ำเงิน */
 }
 
-/* Neural Background (ใช้โค้ดเดิม) */
-.neural-background {
-    position: fixed;
-    top: 0;
-    left: 0;
+/* (โค้ดส่วน Neural Background อื่นๆ ถูกละไว้) */
+
+.login-container {
     width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
 }
-/* (โค้ดส่วนที่เหลือของ .neural-background ถูกละไว้) */
+
+.login-card {
+    /* ใช้สำหรับ Modal และเป็นพื้นฐาน */
+    background: rgba(15, 15, 20, 0.95); /* Default: Dark Card */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 20px;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease; 
+}
 
 /* --- Modal Announcement Styles --- */
+
 .neural-modal-overlay {
     position: fixed;
     top: 0;
@@ -157,11 +196,11 @@ body {
 }
 
 
-/* Neural Button (ยังคงใช้สีน้ำเงิน/ม่วงตามเดิม) */
+/* Neural Button */
 .neural-button {
     width: 100%;
     background: transparent;
-    color: #ffffff;
+    color: #ffffff; /* ข้อความ: ขาว */
     border: none;
     border-radius: 12px;
     padding: 0;
@@ -177,7 +216,43 @@ body {
     align-items: center;
     justify-content: center;
 }
-/* (โค้ดส่วนที่เหลือของปุ่มถูกละไว้) */
+
+/* ***** การแก้ไขสำคัญ: ปุ่มสีดำ (พื้นหลังเป็นสีดำถาวร) ***** */
+.button-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000000; /* พื้นหลังปุ่ม: ดำ */
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.neural-button:hover .button-bg {
+    background: #1f1f1f; /* Hover: ดำเข้มขึ้นเล็กน้อย */
+    transform: scale(1.02);
+}
+
+.neural-button:active .button-bg {
+    transform: scale(0.98);
+}
+
+.button-text {
+    position: relative;
+    z-index: 2;
+    transition: opacity 0.2s ease;
+}
+
+/* ลบ Glow สีน้ำเงินออกเพื่อให้เข้ากับสีดำ */
+.button-glow {
+    /* ใช้สีดำจางๆ เพื่อทำ Glow แทนสีน้ำเงิน */
+    background: rgba(0, 0, 0, 0.4); 
+    filter: blur(5px);
+}
+.neural-button:hover .button-glow {
+    opacity: 0.8;
+}
 
 /* Mobile Responsive (โค้ดเดิม) */
 @media (max-width: 480px) {
