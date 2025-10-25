@@ -11,13 +11,12 @@ class GeofenceApp {
         this.statusIconContainer = document.getElementById('statusIcon');
         this.retryButton = document.getElementById('retryButton');
         this.pageTitle = document.getElementById('pageTitle');
-        this.loadingIcon = document.getElementById('loadingIcon');
 
         // Announcement Modal Elements
         this.announcementModalOverlay = document.getElementById('announcementModalOverlay');
         this.announcementImage = document.getElementById('announcementImage');
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
-        this.modalLoader = document.getElementById('modalLoader'); // Loader Element
+        this.modalLoader = document.getElementById('modalLoader'); 
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
@@ -28,8 +27,7 @@ class GeofenceApp {
         this.params = new URLSearchParams(window.location.search);
         this.studioName = this.params.get('studio');
         
-        // target.dist ถูกกำหนดเป็นเมตร (จาก K3)
-        this.target = { lat: null, lon: null, dist: null, url: null }; 
+        this.target = { lat: null, lon: null, dist: null, url: null };
 
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
@@ -40,7 +38,6 @@ class GeofenceApp {
 
     init() {
         this.bindEvents();
-        // เริ่มต้นด้วยการโหลดประกาศเสมอ
         this.loadAnnouncement(); 
     }
 
@@ -50,11 +47,13 @@ class GeofenceApp {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
         
+        // เมื่อรูปโหลดเสร็จ ให้ซ่อน Loader และแสดงรูปภาพ
         this.announcementImage.addEventListener('load', () => {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
         });
 
+        // หากโหลดรูปไม่สำเร็จ (เกิด Error) ให้ดำเนินการต่อตาม Flow หลัก
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'none'; 
@@ -68,9 +67,9 @@ class GeofenceApp {
     continueAppFlow() {
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
         
-         if (this.studioName && this.studioName !== "ประกาศ") {
+         if (this.studioName) {
             this.showGeofenceChecker();
-            this.fetchGeofenceConfig(); // โหลด Geofence Config ก่อน แล้วจึงเริ่ม checkGeolocation
+            this.fetchGeofenceConfig(); 
         } else {
             this.showMainMenu();
             this.setupMenuButtons();
@@ -91,7 +90,6 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
         document.body.classList.remove('light-mode'); 
-        this.setStatus('กำลังตรวจสอบตำแหน่ง Studio...', 'โปรดอนุญาตให้เข้าถึงตำแหน่ง GPS ของคุณ', 'loading', false);
     }
 
     setupMenuButtons() {
@@ -113,11 +111,7 @@ class GeofenceApp {
             }
 
             newButton.addEventListener('click', () => {
-                if (name === "ประกาศ") {
-                    this.loadAnnouncement();
-                } else {
-                    window.location.href = `?studio=${encodeURIComponent(name)}`;
-                }
+                window.location.href = `?studio=${encodeURIComponent(name)}`;
             });
             
             this.menuButtonsContainer.appendChild(newButton);
@@ -147,15 +141,42 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.imageUrl && result.imageUrl.trim() !== '') {
+                // แสดง Modal และ Loader
                 this.announcementModalOverlay.style.display = 'flex'; 
-                this.modalLoader.style.display = 'flex'; 
-                this.announcementImage.style.display = 'none'; // ซ่อนรูปเก่า
+                this.modalLoader.style.display = 'flex'; // แสดง Loader ทันที
                 setTimeout(() => {
                     this.announcementModalOverlay.classList.add('show');
                 }, 50);
                 
+                // ตั้งค่า src เพื่อให้เริ่มโหลด
                 this.announcementImage.src = result.imageUrl.trim(); 
+                
+                // **** NEW: ตั้งค่า Timeout 5 วินาที ****
+                const loadTimeout = setTimeout(() => {
+                    if (this.modalLoader.style.display !== 'none' && this.announcementImage.style.display === 'none') {
+                        console.warn("Announcement load timeout. Skipping image and continuing flow.");
+                        this.announcementImage.src = ''; // ยกเลิกการโหลด
+                        this.modalLoader.style.display = 'none';
+                        this.closeAnnouncementModal(); // ปิด Modal และไปที่ Flow หลัก
+                    }
+                }, 5000); // 5 วินาที
+                
+                // เคลียร์ timeout เมื่อรูปโหลดสำเร็จ/ล้มเหลว
+                this.announcementImage.onload = () => {
+                    clearTimeout(loadTimeout);
+                    this.modalLoader.style.display = 'none';
+                    this.announcementImage.style.display = 'block';
+                };
+
+                this.announcementImage.onerror = () => {
+                    clearTimeout(loadTimeout);
+                    this.modalLoader.style.display = 'none';
+                    this.closeAnnouncementModal();
+                };
+
+
             } else {
+                // โหลดไม่สำเร็จ/ไม่มีรูป: ไปที่ Flow หลักต่อ
                 this.continueAppFlow();
             }
         } catch (error) {
@@ -172,148 +193,134 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic (โค้ดที่เพิ่มเข้ามา) ---
+    // ---------------------------------------------------
+    // --- Geofencing Logic (โค้ดที่ถูกนำกลับมาใส่) ---
+    // ---------------------------------------------------
 
-    // 1. โหลด Geofence Config จาก Apps Script
     async fetchGeofenceConfig() {
-        this.setStatus('กำลังโหลดข้อมูล...', `กำลังดึงข้อมูลตำแหน่งของ ${this.studioName}`, 'loading', false);
-        try {
-            const formData = new FormData();
-            formData.append('action', 'get_geofence_config');
-            formData.append('studioName', this.studioName); // Apps Script ใช้ studioName
-            formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
+        this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
+        
+        const formData = new FormData();
+        formData.append('action', 'get_geofence_config');
+        formData.append('studio', this.studioName);
 
+        try {
             const response = await fetch(this.WEB_APP_URL, {
                 method: 'POST',
-                body: formData 
+                body: formData
             });
-            
+
             const result = await response.json();
             
-            // Apps Script ส่ง: lat, lon, radius, url
-            if (result.success && result.lat && result.lon && result.radius && result.url) {
-                this.target.lat = parseFloat(result.lat);
-                this.target.lon = parseFloat(result.lon);
-                this.target.dist = parseFloat(result.radius); // รับค่าเป็นเมตร
-                this.target.url = result.url;
+            if (result.success) {
+                // ตรวจสอบว่าต้อง Geofence Check หรือไม่
+                if (result.needsCheck === false) {
+                     this.updateStatus('success', `${this.studioName}`, 'นำไปสู่หน้าประกาศ...');
+                     setTimeout(() => {
+                        window.top.location.href = result.formUrl;
+                     }, 500);
+                     return;
+                }
                 
-                // เมื่อได้ Config แล้ว ให้เริ่มตรวจสอบตำแหน่ง
-                this.checkGeolocation();
+                this.target.lat = result.targetLat;
+                this.target.lon = result.targetLon;
+                this.target.dist = result.maxDist;
+                this.target.url = result.formUrl;
+                
+                this.checkGeolocation(); 
             } else {
-                this.setStatus('ข้อผิดพลาด ⚠️', `ไม่พบข้อมูล Geofence สำหรับ Studio นี้ (${result.message || 'Unknown'})`, 'error', true);
+                this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
             }
         } catch (error) {
-            console.error('Error fetching geofence config:', error);
-            this.setStatus('ข้อผิดพลาดเครือข่าย 🌐', 'ไม่สามารถเชื่อมต่อเพื่อดึงข้อมูล Geofence ได้', 'error', true);
+            this.updateStatus('error', 'การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อกับ Web App ได้');
         }
     }
 
-    // 2. ตรวจสอบตำแหน่ง GPS
     checkGeolocation() {
-        this.setStatus('กำลังตรวจสอบตำแหน่ง Studio...', 'โปรดอนุญาตให้เข้าถึงตำแหน่ง GPS ของคุณ', 'loading', false);
-        this.retryButton.style.display = 'none';
+        if (this.target.lat === null) {
+             this.fetchGeofenceConfig();
+             return;
+        }
+        
+        this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
+        this.retryButton.style.display = 'none'; 
 
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => this.successHandler(position),
-                (error) => this.errorHandler(error),
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                (position) => this.geoSuccess(position),
+                (error) => this.geoError(error), 
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
             );
         } else {
-            this.setStatus('ไม่สำเร็จ 🚫', 'เบราว์เซอร์ไม่รองรับ Geolocation', 'error', true);
+            this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
         }
     }
-
-    // 3. เมื่อได้ตำแหน่งสำเร็จ
-    successHandler(position) {
+    
+    geoSuccess(position) {
         const userLat = position.coords.latitude;
         const userLon = position.coords.longitude;
-        
-        const distance = this.calculateDistance(
-            userLat, userLon, 
-            this.target.lat, this.target.lon
-        ); // ผลลัพธ์เป็นเมตร
-        
+        const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
+        const distanceMeters = (distance * 1000).toFixed(0);
+
         if (distance <= this.target.dist) {
-            // อยู่ในพื้นที่ที่กำหนด
-            this.setStatus('เข้าสู่ระบบสำเร็จ ✅', `คุณอยู่ในพื้นที่ของ ${this.studioName}`, 'success', false);
+            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
-                window.location.href = this.target.url;
-            }, 500);
+                 window.top.location.href = this.target.url;
+            }, 1000);
+
         } else {
-            // ไม่อยู่ในพื้นที่
-            const distInMeters = Math.round(distance);
-            this.setStatus(
-                'ไม่อยู่ในพื้นที่ ❌', 
-                `คุณอยู่ห่างจาก Studio ${distInMeters} เมตร (รัศมี: ${this.target.dist} เมตร)`, 
-                'error', 
-                true
-            );
+            const maxMeters = this.target.dist * 1000;
+            this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
         }
     }
     
-    // 4. เมื่อเกิดข้อผิดพลาดในการรับตำแหน่ง
-    errorHandler(error) {
-        let message = '';
-        let title = 'ไม่สำเร็จ ❌';
-        
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                message = "คุณปฏิเสธการเข้าถึงตำแหน่ง โปรดเปิด Location Service และลองใหม่อีกครั้ง";
-                break;
-            case error.POSITION_UNAVAILABLE:
-                message = "ไม่สามารถระบุตำแหน่งปัจจุบันได้";
-                break;
-            case error.TIMEOUT:
-                message = "ใช้เวลาในการตรวจสอบนานเกินไป โปรดลองใหม่อีกครั้ง";
-                break;
-            case error.UNKNOWN_ERROR:
-                message = "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
-                break;
-            default:
-                message = "เกิดข้อผิดพลาดในการเข้าถึง GPS";
+    geoError(error) {
+        let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
+        let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
+
+        if (error.code === 1) {
+            errorMessage += ' (ถูกปฏิเสธ)';
+        } else if (error.code === 2) {
+            errorMessage += ' (ไม่พบตำแหน่ง)';
+        } else if (error.code === 3) {
+            errorMessage += ' (หมดเวลาค้นหา)';
         }
-        this.setStatus(title, message, 'error', true);
+        
+        // แสดงข้อความและปุ่ม Retry
+        this.updateStatus('error', errorMessage, customMessage);
+        this.retryButton.style.display = 'flex'; // แสดงปุ่ม "ลองใหม่อีกครั้ง"
+    }
+    
+    calculateDistance(lat1, lon1, lat2, lon2) {
+        function toRad(Value) { return Value * Math.PI / 180; }
+        const R = 6371;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const lat1Rad = toRad(lat1);
+        const lat2Rad = toRad(lat2);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+        return R * c;
     }
 
-    // 5. อัปเดต UI ของ Status Card
-    setStatus(title, message, iconType, showRetry) {
+    updateStatus(type, title, message) {
+        this.geofenceChecker.classList.remove('loading', 'error', 'success');
+        this.geofenceChecker.classList.add(type);
+
         this.statusTitle.textContent = title;
         this.statusMessage.textContent = message;
-        this.retryButton.style.display = showRetry ? 'flex' : 'none';
         
-        // ล้าง Icon ปัจจุบัน
-        this.statusIconContainer.innerHTML = '';
-        
-        let iconHtml = '';
-        if (iconType === 'loading') {
-            iconHtml = `<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
-            </svg>`;
-        } else if (iconType === 'success') {
-            iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="color: #10b981;"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.532-1.267-1.268a.75.75 0 0 0-1.06 1.06l1.794 1.793a.75.75 0 0 0 1.06-.01L15.61 10.186Z" clip-rule="evenodd" /></svg>`;
-        } else if (iconType === 'error') {
-            iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="color: #ef4444;"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.73 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.73-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clip-rule="evenodd" /></svg>`;
+        if (type === 'loading') {
+            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle></svg>';
+            this.retryButton.style.display = 'none';
+        } else if (type === 'error') {
+            this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+            this.retryButton.style.display = 'flex';
+        } else if (type === 'success') {
+            this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+            this.retryButton.style.display = 'none';
         }
-        
-        this.statusIconContainer.innerHTML = iconHtml;
-    }
-    
-    // 6. คำนวณระยะทาง (Haversine Formula) - ผลลัพธ์เป็นเมตร
-    calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000; // รัศมีโลกเป็นเมตร
-        const dLat = this.deg2rad(lat2 - lat1);
-        const dLon = this.deg2rad(lon2 - lon1);
-        const a = 
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c; // ระยะทางเป็นเมตร
-        return distance;
-    }
-
-    deg2rad(deg) {
-        return deg * (Math.PI / 180);
     }
 }
 
