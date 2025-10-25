@@ -16,10 +16,10 @@ class GeofenceApp {
         this.announcementModalOverlay = document.getElementById('announcementModalOverlay');
         this.announcementImage = document.getElementById('announcementImage');
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
+        this.modalLoader = document.getElementById('modalLoader'); // NEW: Loader Element
 
         // Configuration 
-        // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzObYDke96Xn19aqriJAzeRYCAQeMPONNxpvMyvubBz435uHKa1LpTpC_C7bu835pQ/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMyc4j2X-fsRhlEa4BCgGQCkOg_zPL1UDwBV2DzRBilbVgnIzPTVVVdjqv6KQ7t7Ku/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -47,6 +47,19 @@ class GeofenceApp {
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
+        
+        // NEW: เมื่อรูปโหลดเสร็จ ให้ซ่อน Loader และแสดงรูปภาพ
+        this.announcementImage.addEventListener('load', () => {
+             this.modalLoader.style.display = 'none';
+             this.announcementImage.style.display = 'block';
+        });
+
+        // NEW: หากโหลดรูปไม่สำเร็จ (เกิด Error) ให้ดำเนินการต่อตาม Flow หลัก
+        this.announcementImage.addEventListener('error', () => {
+             this.modalLoader.style.display = 'none';
+             this.closeAnnouncementModal(); // ปิด Modal และไปที่ Flow หลัก
+             console.error("Announcement Image failed to load.");
+        });
     }
     
     // --- App Flow Control ---
@@ -69,7 +82,6 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
-        // *** การแก้ไข UI: เปลี่ยน Body เป็น Light Mode เมื่อแสดง Menu (พื้นหลังขาว/ข้อความดำ) ***
         document.body.classList.add('light-mode'); 
     }
 
@@ -77,7 +89,6 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
-        // *** การแก้ไข UI: เปลี่ยน Body เป็น Dark Mode เมื่อแสดง Geofence ***
         document.body.classList.remove('light-mode'); 
     }
 
@@ -116,6 +127,7 @@ class GeofenceApp {
         }
         
         this.announcementModalOverlay.classList.remove('show');
+        this.modalLoader.style.display = 'flex'; // แสดง Loader ก่อน
 
         try {
             const formData = new FormData();
@@ -130,16 +142,24 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.imageUrl && result.imageUrl.trim() !== '') {
-                this.announcementImage.src = result.imageUrl.trim();
+                // โหลดรูปภาพสำเร็จ: แสดง Modal และตั้งค่า src
                 this.announcementModalOverlay.style.display = 'flex'; 
                 setTimeout(() => {
                     this.announcementModalOverlay.classList.add('show');
-                }, 50); 
+                }, 50);
+                
+                // ตั้งค่า src เพื่อให้เริ่มโหลด
+                this.announcementImage.src = result.imageUrl.trim(); 
+                
+                // Note: การแสดงผลจะถูกจัดการโดย event listener 'load' / 'error'
             } else {
+                // โหลดไม่สำเร็จ/ไม่มีรูป: ซ่อน Loader และไปที่ Flow หลักต่อ
+                this.modalLoader.style.display = 'none';
                 this.continueAppFlow();
             }
         } catch (error) {
             console.error('Error fetching announcement:', error);
+            this.modalLoader.style.display = 'none';
             this.continueAppFlow();
         }
     }
@@ -152,7 +172,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic ---
+    // --- Geofencing Logic (โค้ดที่เหลือถูกละไว้) ---
 
     async fetchGeofenceConfig() {
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
