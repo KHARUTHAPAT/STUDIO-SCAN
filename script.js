@@ -19,7 +19,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwOS4kNsLzuQW1m442FYToAICy7BAm1KADYJ84Y-2YpEKGEGQf_jFhk1jW6Irv6U9o/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzE7Y6Y5UZEDcCydw3PMt1ML7hd2USA_X8WQnbTzNa9Ab6Ar4QhLHIIGjM8Qk5p7qKS/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters (from URL or internal click)
@@ -85,7 +85,7 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // เปลี่ยนพารามิเตอร์ของ URL ปัจจุบัน (GitHub) เพื่อให้หน้า Frontend รีโหลดและเริ่ม Geofence Check
+                // *** จุดสำคัญที่แก้ไขปัญหาการเด้ง: ใช้การเปลี่ยนพารามิเตอร์ของหน้า GitHub ปัจจุบัน ***
                 window.location.href = `?studio=${encodeURIComponent(name)}`;
             });
             
@@ -93,7 +93,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Geofencing Logic ---
+    // --- Geofencing Logic (การสื่อสารกับ Backend) ---
 
     async fetchGeofenceConfig() {
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
