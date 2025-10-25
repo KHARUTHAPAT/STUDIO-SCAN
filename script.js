@@ -25,12 +25,16 @@ class GeofenceApp {
         // Geofencing Parameters
         this.params = new URLSearchParams(window.location.search);
         this.studioName = this.params.get('studio');
+        
         this.target = { lat: null, lon: null, dist: null, url: null };
 
         // ซ่อนทุกอย่างไว้ก่อน แล้วให้ loadAnnouncement เป็นผู้แสดงผล
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
 
+        // *** การแก้ไขที่สำคัญ: ตั้ง Title หน้าเริ่มต้นเป็น 'ประกาศ' ***
+        this.pageTitle.textContent = 'ประกาศ'; 
+        
         this.init();
     }
 
@@ -50,6 +54,9 @@ class GeofenceApp {
     // --- App Flow Control ---
 
     continueAppFlow() {
+        // *** การแก้ไขที่สำคัญ: เปลี่ยน Title เมื่อเข้าสู่ Flow หลัก ***
+        this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
+        
          if (this.studioName) {
             this.showGeofenceChecker();
             this.fetchGeofenceConfig(); 
@@ -71,11 +78,10 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
-        this.statusTitle.textContent = `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`;
     }
 
     setupMenuButtons() {
-        const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5"];
+        const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5", "STUDIO"];
         
         studioNames.forEach(name => {
             const newButton = document.createElement('button');
@@ -90,7 +96,6 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // เปลี่ยนพารามิเตอร์ของหน้า GitHub ปัจจุบัน
                 window.location.href = `?studio=${encodeURIComponent(name)}`;
             });
             
@@ -139,7 +144,6 @@ class GeofenceApp {
         this.announcementModalOverlay.classList.remove('show');
         setTimeout(() => {
             this.announcementModalOverlay.style.display = 'none';
-            // เมื่อปิด Modal ให้ดำเนินการตาม Flow หลักของแอป
             this.continueAppFlow(); 
         }, 300); 
     }
@@ -160,8 +164,17 @@ class GeofenceApp {
             });
 
             const result = await response.json();
-
+            
             if (result.success) {
+                // *** การแก้ไขที่สำคัญ: ตรวจสอบว่าต้อง Geofence Check หรือไม่ ***
+                if (result.needsCheck === false) {
+                     this.updateStatus('success', 'เข้าสู่ Studio', 'ข้ามการตรวจสอบตำแหน่ง (นำไปสู่แบบฟอร์ม...)');
+                     setTimeout(() => {
+                        window.top.location.href = result.formUrl;
+                     }, 1000);
+                     return;
+                }
+                
                 this.target.lat = result.targetLat;
                 this.target.lon = result.targetLon;
                 this.target.dist = result.maxDist;
