@@ -19,7 +19,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzXgIHCQBa4QZH4CUQOJ0SwLeYKOfx6o1QjDrll-z5YDVFpn8Xo5GQNvUzM20g3zBcS/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMyc4j2X-fsRhlEa4BCgGQCkOg_zPL1UDwBV2DzRBilbVgnIzPTVVVdjqv6KQ7t7Ku/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
