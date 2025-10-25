@@ -28,7 +28,8 @@ class GeofenceApp {
         this.params = new URLSearchParams(window.location.search);
         this.studioName = this.params.get('studio');
         
-        this.target = { lat: null, lon: null, dist: null, url: null }; // จะถูกกำหนดค่าใน fetchGeofenceConfig()
+        // target.dist ถูกกำหนดเป็นเมตร (จาก K3)
+        this.target = { lat: null, lon: null, dist: null, url: null }; 
 
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
@@ -49,17 +50,15 @@ class GeofenceApp {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
         
-        // NEW: เมื่อรูปโหลดเสร็จ ให้ซ่อน Loader และแสดงรูปภาพ
         this.announcementImage.addEventListener('load', () => {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
         });
 
-        // NEW: หากโหลดรูปไม่สำเร็จ (เกิด Error) ให้ดำเนินการต่อตาม Flow หลัก
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
-             this.announcementImage.style.display = 'none'; // ซ่อนรูปที่โหลดไม่สำเร็จ
-             this.closeAnnouncementModal(); // ปิด Modal และไปที่ Flow หลัก
+             this.announcementImage.style.display = 'none'; 
+             this.closeAnnouncementModal(); 
              console.error("Announcement Image failed to load or permission denied.");
         });
     }
@@ -113,7 +112,6 @@ class GeofenceApp {
                 newButton.querySelector('.button-text').textContent = name;
             }
 
-            // เมื่อคลิกปุ่ม "ประกาศ" ให้เรียก loadAnnouncement อีกครั้ง
             newButton.addEventListener('click', () => {
                 if (name === "ประกาศ") {
                     this.loadAnnouncement();
@@ -129,7 +127,6 @@ class GeofenceApp {
     // --- Announcement Logic ---
 
     async loadAnnouncement() {
-        // ... (โค้ดเดิม) ...
         if (!this.announcementModalOverlay) {
             this.continueAppFlow();
             return;
@@ -150,18 +147,15 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.imageUrl && result.imageUrl.trim() !== '') {
-                // โหลดรูปภาพสำเร็จ: แสดง Modal และ Loader
                 this.announcementModalOverlay.style.display = 'flex'; 
-                this.modalLoader.style.display = 'flex'; // แสดง Loader ทันที
+                this.modalLoader.style.display = 'flex'; 
                 this.announcementImage.style.display = 'none'; // ซ่อนรูปเก่า
                 setTimeout(() => {
                     this.announcementModalOverlay.classList.add('show');
                 }, 50);
                 
-                // ตั้งค่า src เพื่อให้เริ่มโหลด (เมื่อโหลดเสร็จ event listener จะจัดการต่อ)
                 this.announcementImage.src = result.imageUrl.trim(); 
             } else {
-                // โหลดไม่สำเร็จ/ไม่มีรูป: ไปที่ Flow หลักต่อ
                 this.continueAppFlow();
             }
         } catch (error) {
@@ -178,7 +172,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic (ที่เพิ่มเข้ามา) ---
+    // --- Geofencing Logic (โค้ดที่เพิ่มเข้ามา) ---
 
     // 1. โหลด Geofence Config จาก Apps Script
     async fetchGeofenceConfig() {
@@ -186,7 +180,7 @@ class GeofenceApp {
         try {
             const formData = new FormData();
             formData.append('action', 'get_geofence_config');
-            formData.append('studioName', this.studioName);
+            formData.append('studioName', this.studioName); // Apps Script ใช้ studioName
             formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
 
             const response = await fetch(this.WEB_APP_URL, {
@@ -196,16 +190,17 @@ class GeofenceApp {
             
             const result = await response.json();
             
+            // Apps Script ส่ง: lat, lon, radius, url
             if (result.success && result.lat && result.lon && result.radius && result.url) {
                 this.target.lat = parseFloat(result.lat);
                 this.target.lon = parseFloat(result.lon);
-                this.target.dist = parseFloat(result.radius);
+                this.target.dist = parseFloat(result.radius); // รับค่าเป็นเมตร
                 this.target.url = result.url;
                 
                 // เมื่อได้ Config แล้ว ให้เริ่มตรวจสอบตำแหน่ง
                 this.checkGeolocation();
             } else {
-                this.setStatus('ข้อผิดพลาด ⚠️', 'ไม่พบข้อมูล Geofence สำหรับ Studio นี้', 'error', true);
+                this.setStatus('ข้อผิดพลาด ⚠️', `ไม่พบข้อมูล Geofence สำหรับ Studio นี้ (${result.message || 'Unknown'})`, 'error', true);
             }
         } catch (error) {
             console.error('Error fetching geofence config:', error);
@@ -304,7 +299,7 @@ class GeofenceApp {
         this.statusIconContainer.innerHTML = iconHtml;
     }
     
-    // 6. คำนวณระยะทาง (Haversine Formula)
+    // 6. คำนวณระยะทาง (Haversine Formula) - ผลลัพธ์เป็นเมตร
     calculateDistance(lat1, lon1, lat2, lon2) {
         const R = 6371000; // รัศมีโลกเป็นเมตร
         const dLat = this.deg2rad(lat2 - lat1);
