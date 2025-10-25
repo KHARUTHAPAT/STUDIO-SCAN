@@ -38,11 +38,11 @@ class GeofenceApp {
 
     init() {
         this.bindEvents();
+        // ***** FIX: โหลดประกาศก่อนเสมอ เมื่อเสร็จจะเรียก continueAppFlow() *****
         this.loadAnnouncement(); 
     }
 
     bindEvents() {
-        // เมื่อกดปุ่ม Retry ให้เรียก checkGeolocation() ซ้ำ
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
@@ -69,8 +69,14 @@ class GeofenceApp {
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
         
          if (this.studioName) {
+            // *** การแก้ไข: แสดง UI Geofence Checker ก่อน แล้วค่อยเริ่มเรียก API ***
             this.showGeofenceChecker();
-            this.fetchGeofenceConfig(); 
+            
+            // หน่วงเวลา 300ms ให้ UI แสดงผลสมบูรณ์ก่อนเริ่ม Geofence Check
+            setTimeout(() => {
+                this.fetchGeofenceConfig();
+            }, 300); 
+            
         } else {
             this.showMainMenu();
             this.fetchStudioNamesAndSetupMenu();
@@ -109,7 +115,7 @@ class GeofenceApp {
             if (result.success && result.studioNames && result.studioNames.length > 0) {
                 this.setupMenuButtons(result.studioNames);
             } else {
-                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้</p>';
+                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้ (โปรดตรวจสอบชีต \'Studio\' และสิทธิ์การเข้าถึง)</p>';
                 console.error("No studio names returned or failed to fetch.");
             }
 
@@ -213,7 +219,7 @@ class GeofenceApp {
         this.announcementModalOverlay.classList.remove('show');
         setTimeout(() => {
             this.announcementModalOverlay.style.display = 'none';
-            this.continueAppFlow(); 
+            this.continueAppFlow(); // เรียก continueAppFlow เมื่อ Modal ถูกปิด
         }, 300); 
     }
 
@@ -248,6 +254,7 @@ class GeofenceApp {
                 this.target.dist = result.maxDist;
                 this.target.url = result.formUrl;
                 
+                // *** เริ่มการขอตำแหน่งจริง ***
                 this.checkGeolocation(); 
             } else {
                 this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
