@@ -16,7 +16,7 @@ class GeofenceApp {
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
 
         // Configuration (ดึงค่าจาก Web App URL Parameter)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxykVja0-XjwSaB2r4I_R6Gq-Z4MuMBV_QKVMpIqxZvvw9XlLh1imUf1OMBOivp9Zs/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbytAezLmpvC1r79pUsPrbnO260z1rBvU-RVXVzdl60BJ-1Svv8Jac2sMP9LFHeUV541/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters (จาก Apps Script doGet)
