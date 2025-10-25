@@ -20,7 +20,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyGIBkHlSKhiiB2wxdUTniS48zNx3C4nByYSUImvXfTMwxukir9sNCD0T7L9LT__3rp/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfqs2wOjiShnLu1hf7TtWYtRMNm8tQ__O-IpaJ0NPLT0d-hvC5ZihUrDZBlYO3CxtX/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -42,6 +42,7 @@ class GeofenceApp {
     }
 
     bindEvents() {
+        // เมื่อกดปุ่ม Retry ให้เรียก checkGeolocation() ซ้ำ
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
@@ -118,7 +119,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Announcement Logic ---
+    // --- Announcement Logic (พร้อม Timeout) ---
 
     async loadAnnouncement() {
         if (!this.announcementModalOverlay) {
@@ -151,7 +152,7 @@ class GeofenceApp {
                 // ตั้งค่า src เพื่อให้เริ่มโหลด
                 this.announcementImage.src = result.imageUrl.trim(); 
                 
-                // **** NEW: ตั้งค่า Timeout 5 วินาที ****
+                // **** NEW: ตั้งค่า Timeout 5 วินาที (ป้องกันการค้าง) ****
                 const loadTimeout = setTimeout(() => {
                     if (this.modalLoader.style.display !== 'none' && this.announcementImage.style.display === 'none') {
                         console.warn("Announcement load timeout. Skipping image and continuing flow.");
@@ -193,9 +194,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // ---------------------------------------------------
-    // --- Geofencing Logic (โค้ดที่ถูกนำกลับมาใส่) ---
-    // ---------------------------------------------------
+    // --- Geofencing Logic ---
 
     async fetchGeofenceConfig() {
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
@@ -213,7 +212,6 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success) {
-                // ตรวจสอบว่าต้อง Geofence Check หรือไม่
                 if (result.needsCheck === false) {
                      this.updateStatus('success', `${this.studioName}`, 'นำไปสู่หน้าประกาศ...');
                      setTimeout(() => {
@@ -298,7 +296,7 @@ class GeofenceApp {
         const dLon = toRad(lon2 - lon1);
         const lat1Rad = toRad(lat1);
         const lat2Rad = toRad(lat2);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        const a = Math.sin(dLat / 2) * Math.sin(dDat / 2) +
                   Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
         return R * c;
