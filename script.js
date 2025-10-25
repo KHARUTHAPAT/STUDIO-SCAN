@@ -2,10 +2,13 @@
 class GeofenceApp {
     constructor() {
         // UI Elements
-        this.statusCard = document.getElementById('geoStatusCard');
+        this.mainMenuCard = document.getElementById('mainMenuCard');
+        this.geofenceChecker = document.getElementById('geofenceChecker');
+        this.menuButtonsContainer = document.getElementById('adminMenuButtons');
+        
+        this.statusCard = document.getElementById('geoStatusCard'); // The inner card in geofenceChecker
         this.statusTitle = document.getElementById('statusTitle');
         this.statusMessage = document.getElementById('statusMessage');
-        this.loadingIcon = document.getElementById('loadingIcon');
         this.statusIconContainer = document.getElementById('statusIcon');
         this.retryButton = document.getElementById('retryButton');
         this.pageTitle = document.getElementById('pageTitle');
@@ -15,32 +18,34 @@ class GeofenceApp {
         this.announcementImage = document.getElementById('announcementImage');
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
 
-        // Configuration (ดึงค่าจาก Web App URL Parameter)
+        // Configuration 
+        // ***** URL ใหม่ของคุณ *****
         this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbytAezLmpvC1r79pUsPrbnO260z1rBvU-RVXVzdl60BJ-1Svv8Jac2sMP9LFHeUV541/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
-        // Geofencing Parameters (จาก Apps Script doGet)
+        // Geofencing Parameters (from URL or internal click)
         this.params = new URLSearchParams(window.location.search);
         this.studioName = this.params.get('studio');
         
-        // Geofencing Target (ต้องดึงค่า Lat/Lon/Dist มาจาก Apps Script)
+        // Geofencing Target (to be fetched from Apps Script)
         this.target = { lat: null, lon: null, dist: null, url: null };
 
         this.init();
     }
 
     init() {
-        if (!this.studioName) {
-            this.updateStatus('error', 'ข้อผิดพลาด', 'ไม่พบรหัส Studio ในลิงก์ QR Code โปรดสร้าง QR Code ใหม่');
-            return;
-        }
-
-        this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
-        this.statusTitle.textContent = `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`;
-
         this.bindEvents();
         this.loadAnnouncement(); // 1. แสดงประกาศ
-        this.fetchGeofenceConfig(); // 2. ดึงค่า Geofence จาก Apps Script
+        
+        if (this.studioName) {
+            // โหมด 1: มาจากการคลิกเมนู/สแกน QR Code ที่ถูกต้อง -> ไปตรวจสอบ Geofence ทันที
+            this.showGeofenceChecker();
+            this.fetchGeofenceConfig(); 
+        } else {
+            // โหมด 2: เข้าถึง URL หลัก -> แสดงหน้าเมนู
+            this.showMainMenu();
+            this.setupMenuButtons();
+        }
     }
 
     bindEvents() {
@@ -48,6 +53,47 @@ class GeofenceApp {
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
+    }
+    
+    // --- UI/Mode Handlers ---
+
+    showMainMenu() {
+        this.geofenceChecker.style.display = 'none';
+        this.mainMenuCard.style.display = 'flex';
+        this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
+    }
+
+    showGeofenceChecker() {
+        this.mainMenuCard.style.display = 'none';
+        this.geofenceChecker.style.display = 'flex';
+        this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
+        this.statusTitle.textContent = `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`;
+    }
+
+    setupMenuButtons() {
+        // รายการปุ่มที่จะสร้าง (ต้องตรงกับ FORMS ใน Code.gs)
+        const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5"];
+        
+        studioNames.forEach(name => {
+            const newButton = document.createElement('button');
+            newButton.className = 'neural-button';
+            newButton.type = 'button';
+            newButton.style.marginTop = '0';
+            
+            newButton.innerHTML = `
+                <div class="button-bg"></div>
+                <span class="button-text">เข้าสู่ ${name}</span>
+                <div class="button-glow"></div>
+            `;
+
+            newButton.addEventListener('click', () => {
+                // เมื่อคลิกปุ่ม จะ redirect ไปที่ URL หลักพร้อมพารามิเตอร์ที่ถูกต้อง
+                // การใช้ this.WEB_APP_URL ในการ redirect ทำให้เกิดการโหลดซ้ำพร้อมพารามิเตอร์
+                window.location.href = `${this.WEB_APP_URL}?studio=${encodeURIComponent(name)}`;
+            });
+            
+            this.menuButtonsContainer.appendChild(newButton);
+        });
     }
 
     // --- Geofencing Logic ---
@@ -73,7 +119,7 @@ class GeofenceApp {
                 this.target.dist = result.maxDist;
                 this.target.url = result.formUrl;
                 
-                this.checkGeolocation(); // เมื่อได้ค่าแล้ว เริ่มตรวจสอบ Geolocation
+                this.checkGeolocation(); 
             } else {
                 this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
             }
@@ -84,7 +130,6 @@ class GeofenceApp {
 
     checkGeolocation() {
         if (this.target.lat === null) {
-             // หากยังไม่ได้ค่า ให้เรียก fetch config ใหม่
              this.fetchGeofenceConfig();
              return;
         }
@@ -103,31 +148,24 @@ class GeofenceApp {
         }
     }
     
-    // Geolocation Success Handler
     geoSuccess(position) {
         const userLat = position.coords.latitude;
         const userLon = position.coords.longitude;
-        
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
         const distanceMeters = (distance * 1000).toFixed(0);
 
         if (distance <= this.target.dist) {
-            // Success: อยู่ในรัศมี
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
-            
-            // นำทางไปยัง Google Form
             setTimeout(() => {
                  window.top.location.href = this.target.url;
             }, 1000);
 
         } else {
-            // Error: อยู่นอกรัศมี
             const maxMeters = this.target.dist * 1000;
             this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
         }
     }
     
-    // Geolocation Error Handler
     geoError(error) {
         let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
         if (error.code === 1) {
@@ -140,26 +178,22 @@ class GeofenceApp {
         this.updateStatus('error', 'ข้อผิดพลาด GPS', errorMessage);
     }
     
-    // Helper: Haversine Formula (คำนวณระยะทางเป็น กม.)
     calculateDistance(lat1, lon1, lat2, lon2) {
         function toRad(Value) { return Value * Math.PI / 180; }
-        const R = 6371; // รัศมีโลกเป็น กม.
+        const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
         const lat1Rad = toRad(lat1);
         const lat2Rad = toRad(lat2);
-
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                   Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-        
         return R * c;
     }
 
-    // UI Update Helper
     updateStatus(type, title, message) {
-        this.statusCard.classList.remove('loading', 'error', 'success');
-        this.statusCard.classList.add(type);
+        this.geofenceChecker.classList.remove('loading', 'error', 'success');
+        this.geofenceChecker.classList.add(type);
 
         this.statusTitle.textContent = title;
         this.statusMessage.textContent = message;
@@ -195,8 +229,6 @@ class GeofenceApp {
             
             if (result.success && result.imageUrl && result.imageUrl.trim() !== '') {
                 this.announcementImage.src = result.imageUrl.trim();
-                
-                // แสดง Modal
                 this.announcementModalOverlay.style.display = 'flex'; 
                 setTimeout(() => {
                     this.announcementModalOverlay.classList.add('show');
