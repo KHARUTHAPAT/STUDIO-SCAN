@@ -88,7 +88,6 @@ class GeofenceApp {
 
             newButton.addEventListener('click', () => {
                 // เมื่อคลิกปุ่ม จะ redirect ไปที่ URL หลักพร้อมพารามิเตอร์ที่ถูกต้อง
-                // การใช้ this.WEB_APP_URL ในการ redirect ทำให้เกิดการโหลดซ้ำพร้อมพารามิเตอร์
                 window.location.href = `${this.WEB_APP_URL}?studio=${encodeURIComponent(name)}`;
             });
             
