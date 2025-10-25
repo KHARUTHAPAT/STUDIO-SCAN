@@ -20,7 +20,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyI_UF8OrVzFEprg-z1xDmCtdhwqMW5hBSJJ1Ih4whxHpr1y7HDj-iXQ81sgb1SvNNb/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyCK4V914p1zGnJraiR9WQjyOMZ18nCN83DcYteQFCbinPbMTs_YvtzP9kuNOKin5UT/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -93,7 +93,7 @@ class GeofenceApp {
         document.body.classList.remove('light-mode'); 
     }
     
-    // ***** NEW: ดึงชื่อ Studio และสร้างปุ่ม *****
+    // ดึงชื่อ Studio และสร้างปุ่ม
     async fetchStudioNamesAndSetupMenu() {
         try {
             const formData = new FormData();
@@ -120,7 +120,7 @@ class GeofenceApp {
     }
 
     setupMenuButtons(studioNames) {
-        this.menuButtonsContainer.innerHTML = ''; // Clear existing buttons
+        this.menuButtonsContainer.innerHTML = ''; // ล้างปุ่มที่มีอยู่ทั้งหมดก่อนสร้างชุดใหม่
         
         studioNames.forEach(name => {
             const newButton = document.createElement('button');
