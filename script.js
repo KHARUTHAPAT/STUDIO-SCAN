@@ -19,8 +19,8 @@ class GeofenceApp {
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
 
         // Configuration 
-        // ***** URL ใหม่ของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbytAezLmpvC1r79pUsPrbnO260z1rBvU-RVXVzdl60BJ-1Svv8Jac2sMP9LFHeUV541/exec';
+        // ***** URL Apps Script ล่าสุดของคุณ *****
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzwBstqyo8TuRw5wV7pJyReOKyWTADC4pIAZ4l_8KYLGlpnG-ToC7x7pjUgc3JKexqr/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters (from URL or internal click)
@@ -88,6 +88,7 @@ class GeofenceApp {
 
             newButton.addEventListener('click', () => {
                 // เมื่อคลิกปุ่ม จะ redirect ไปที่ URL หลักพร้อมพารามิเตอร์ที่ถูกต้อง
+                // การใช้ this.WEB_APP_URL ในการ redirect ทำให้เกิดการโหลดซ้ำพร้อมพารามิเตอร์
                 window.location.href = `${this.WEB_APP_URL}?studio=${encodeURIComponent(name)}`;
             });
             
