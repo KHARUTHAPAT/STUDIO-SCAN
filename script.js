@@ -16,11 +16,11 @@ class GeofenceApp {
         this.announcementModalOverlay = document.getElementById('announcementModalOverlay');
         this.announcementImage = document.getElementById('announcementImage');
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
-        this.modalLoader = document.getElementById('modalLoader'); 
+        this.modalLoader = document.getElementById('modalLoader'); // Loader Element
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyGIBkHlSKhiiB2wxdUTniS48zNx3C4nByYSUImvXfTMwxukir9sNCD0T7L9LT__3rp/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzObYDke96Xn19aqriJAzeRYCAQeMPONNxpvMyvubBz435uHKa1LpTpC_C7bu835pQ/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -38,6 +38,7 @@ class GeofenceApp {
 
     init() {
         this.bindEvents();
+        // เริ่มต้นด้วยการโหลดประกาศเสมอ
         this.loadAnnouncement(); 
     }
 
@@ -47,17 +48,17 @@ class GeofenceApp {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
         
-        // เมื่อรูปโหลดเสร็จ ให้ซ่อน Loader และแสดงรูปภาพ
+        // NEW: เมื่อรูปโหลดเสร็จ ให้ซ่อน Loader และแสดงรูปภาพ
         this.announcementImage.addEventListener('load', () => {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
         });
 
-        // หากโหลดรูปไม่สำเร็จ (เกิด Error) ให้ดำเนินการต่อตาม Flow หลัก
+        // NEW: หากโหลดรูปไม่สำเร็จ (เกิด Error) ให้ดำเนินการต่อตาม Flow หลัก
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
-             this.announcementImage.style.display = 'none'; 
-             this.closeAnnouncementModal(); 
+             this.announcementImage.style.display = 'none'; // ซ่อนรูปที่โหลดไม่สำเร็จ
+             this.closeAnnouncementModal(); // ปิด Modal และไปที่ Flow หลัก
              console.error("Announcement Image failed to load or permission denied.");
         });
     }
@@ -141,40 +142,15 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.imageUrl && result.imageUrl.trim() !== '') {
-                // แสดง Modal และ Loader
+                // โหลดรูปภาพสำเร็จ: แสดง Modal และ Loader
                 this.announcementModalOverlay.style.display = 'flex'; 
                 this.modalLoader.style.display = 'flex'; // แสดง Loader ทันที
                 setTimeout(() => {
                     this.announcementModalOverlay.classList.add('show');
                 }, 50);
                 
-                // ตั้งค่า src เพื่อให้เริ่มโหลด
+                // ตั้งค่า src เพื่อให้เริ่มโหลด (เมื่อโหลดเสร็จ event listener จะจัดการต่อ)
                 this.announcementImage.src = result.imageUrl.trim(); 
-                
-                // **** NEW: ตั้งค่า Timeout 5 วินาที ****
-                const loadTimeout = setTimeout(() => {
-                    if (this.modalLoader.style.display !== 'none' && this.announcementImage.style.display === 'none') {
-                        console.warn("Announcement load timeout. Skipping image and continuing flow.");
-                        this.announcementImage.src = ''; // ยกเลิกการโหลด
-                        this.modalLoader.style.display = 'none';
-                        this.closeAnnouncementModal(); // ปิด Modal และไปที่ Flow หลัก
-                    }
-                }, 5000); // 5 วินาที
-                
-                // เคลียร์ timeout เมื่อรูปโหลดสำเร็จ/ล้มเหลว
-                this.announcementImage.onload = () => {
-                    clearTimeout(loadTimeout);
-                    this.modalLoader.style.display = 'none';
-                    this.announcementImage.style.display = 'block';
-                };
-
-                this.announcementImage.onerror = () => {
-                    clearTimeout(loadTimeout);
-                    this.modalLoader.style.display = 'none';
-                    this.closeAnnouncementModal();
-                };
-
-
             } else {
                 // โหลดไม่สำเร็จ/ไม่มีรูป: ไปที่ Flow หลักต่อ
                 this.continueAppFlow();
@@ -194,12 +170,7 @@ class GeofenceApp {
     }
 
     // --- Geofencing Logic (โค้ดที่เหลือถูกละไว้) ---
-    async fetchGeofenceConfig() { /* ... (โค้ดเดิม) ... */ }
-    checkGeolocation() { /* ... (โค้ดเดิม) ... */ }
-    geoSuccess(position) { /* ... (โค้ดเดิม) ... */ }
-    geoError(error) { /* ... (โค้ดเดิม) ... */ }
-    calculateDistance(lat1, lon1, lat2, lon2) { /* ... (โค้ดเดิม) ... */ }
-    updateStatus(type, title, message) { /* ... (โค้ดเดิม) ... */ }
+    // (โค้ดส่วนนี้ยังคงเป็น Logic การตรวจสอบตำแหน่งตามที่ส่งให้ก่อนหน้า)
 }
 
 document.addEventListener('DOMContentLoaded', () => {
