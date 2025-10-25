@@ -20,7 +20,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzObYDke96Xn19aqriJAzeRYCAQeMPONNxpvMyvubBz435uHKa1LpTpC_C7bu835pQ/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyI_UF8OrVzFEprg-z1xDmCtdhwqMW5hBSJJ1Ih4whxHpr1y7HDj-iXQ81sgb1SvNNb/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -42,6 +42,7 @@ class GeofenceApp {
     }
 
     bindEvents() {
+        // เมื่อกดปุ่ม Retry ให้เรียก checkGeolocation() ซ้ำ
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
@@ -68,14 +69,11 @@ class GeofenceApp {
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
         
          if (this.studioName) {
-            // *** NEW LOGIC: หน่วง 1 วินาที ก่อนเริ่ม Geofence Check ***
-            setTimeout(() => {
-                this.showGeofenceChecker();
-                this.fetchGeofenceConfig(); 
-            }, 1000); // 1 วินาที
+            this.showGeofenceChecker();
+            this.fetchGeofenceConfig(); 
         } else {
             this.showMainMenu();
-            this.setupMenuButtons();
+            this.fetchStudioNamesAndSetupMenu();
         }
     }
 
@@ -94,9 +92,35 @@ class GeofenceApp {
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
         document.body.classList.remove('light-mode'); 
     }
+    
+    // ***** NEW: ดึงชื่อ Studio และสร้างปุ่ม *****
+    async fetchStudioNamesAndSetupMenu() {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'get_studio_list');
 
-    setupMenuButtons() {
-        const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5", "ประกาศ"];
+            const response = await fetch(this.WEB_APP_URL, {
+                method: 'POST',
+                body: formData 
+            });
+            
+            const result = await response.json();
+            
+            if (result.success && result.studioNames && result.studioNames.length > 0) {
+                this.setupMenuButtons(result.studioNames);
+            } else {
+                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้</p>';
+                console.error("No studio names returned or failed to fetch.");
+            }
+
+        } catch (error) {
+            this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">การเชื่อมต่อ API ล้มเหลว</p>';
+            console.error("Failed to fetch studio list:", error);
+        }
+    }
+
+    setupMenuButtons(studioNames) {
+        this.menuButtonsContainer.innerHTML = ''; // Clear existing buttons
         
         studioNames.forEach(name => {
             const newButton = document.createElement('button');
@@ -106,12 +130,9 @@ class GeofenceApp {
             
             newButton.innerHTML = `
                 <div class="button-bg"></div>
-                <span class="button-text">เข้าสู่ ${name}</span>
+                <span class="button-text">${name === 'ประกาศ' ? name : 'เข้าสู่ ' + name}</span>
                 <div class="button-glow"></div>
             `;
-            if (name === "ประกาศ") {
-                newButton.querySelector('.button-text').textContent = name;
-            }
 
             newButton.addEventListener('click', () => {
                 window.location.href = `?studio=${encodeURIComponent(name)}`;
@@ -121,7 +142,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Announcement Logic ---
+    // --- Announcement Logic (พร้อม Timeout) ---
 
     async loadAnnouncement() {
         if (!this.announcementModalOverlay) {
@@ -196,7 +217,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic (ไม่เปลี่ยนแปลง) ---
+    // --- Geofencing Logic ---
 
     async fetchGeofenceConfig() {
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
