@@ -19,7 +19,7 @@ class GeofenceApp {
 
         // Configuration 
         // ***** URL Apps Script ล่าสุดของคุณ *****
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzMyc4j2X-fsRhlEa4BCgGQCkOg_zPL1UDwBV2DzRBilbVgnIzPTVVVdjqv6KQ7t7Ku/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzObYDke96Xn19aqriJAzeRYCAQeMPONNxpvMyvubBz435uHKa1LpTpC_C7bu835pQ/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -77,7 +77,7 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
-        // *** การแก้ไข UI: เปลี่ยน Body เป็น Dark Mode เมื่อแสดง Geofence (พื้นหลังดำ/ข้อความขาว) ***
+        // *** การแก้ไข UI: เปลี่ยน Body เป็น Dark Mode เมื่อแสดง Geofence ***
         document.body.classList.remove('light-mode'); 
     }
 
