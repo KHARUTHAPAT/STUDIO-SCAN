@@ -1,0 +1,335 @@
+/* Login Form - Complete & Self-Contained */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    /* ใช้ฟอนต์เดิมจากโค้ดต้นฉบับ */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+    
+    background: #0a0a0f; /* Default: Dark Background */
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    line-height: 1.5;
+    position: relative;
+    transition: background 0.3s ease; /* เพิ่ม transition */
+}
+
+/* Neural Background */
+.neural-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.neural-node {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: #3b82f6;
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: neuralPulse 4s ease-in-out infinite;
+}
+
+.neural-node:nth-child(1) {
+    top: 20%;
+    left: 15%;
+    animation-delay: 0s;
+}
+
+.neural-node:nth-child(2) {
+    top: 60%;
+    left: 80%;
+    animation-delay: 1s;
+}
+
+.neural-node:nth-child(3) {
+    top: 80%;
+    left: 20%;
+    animation-delay: 2s;
+}
+
+.neural-node:nth-child(4) {
+    top: 30%;
+    left: 70%;
+    animation-delay: 3s;
+}
+
+.neural-node:nth-child(5) {
+    top: 10%;
+    left: 60%;
+    animation-delay: 4s;
+}
+
+@keyframes neuralPulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.5); }
+}
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+}
+
+.login-card {
+    background: rgba(15, 15, 20, 0.95); /* Default: Dark Card */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 20px;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease; /* เพิ่ม transition */
+}
+
+.ai-glow {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+    animation: aiGlow 6s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes aiGlow {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.ai-logo {
+    position: relative;
+    width: 120px; /* ขยายโลโก้ใหญ่ขึ้น */
+    height: 120px; /* ขยายโลโก้ใหญ่ขึ้น */
+    margin: 0 auto 10px; /* ปรับให้ใกล้กับหัวข้อมากขึ้น */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-header h1 {
+    color: #f8fafc;
+    font-size: 2rem; /* ปรับขนาดตัวอักษรใหญ่ขึ้นตามโลโก้ */
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+}
+
+.login-header p {
+    color: #94a3b8;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+/* --- Modal Announcement Styles --- */
+.neural-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 999; /* Higher than other elements */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.neural-modal-content {
+    max-width: 400px; /* Adjust max-width as needed */
+    padding: 20px;
+    position: relative;
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.neural-modal-overlay.show .neural-modal-content {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close-button:hover {
+    background: #3b82f6;
+    color: #fff;
+}
+.neural-modal-content h2 {
+    color: #f8fafc;
+    font-size: 1.5rem;
+    margin-bottom: 0px;
+}
+.neural-modal-content p {
+    color: #94a3b8;
+}
+.modal-body img {
+    max-width: 100%;
+    display: block;
+}
+/* -------------------------------------- */
+
+
+/* Neural Button */
+.neural-button {
+    width: 100%;
+    background: transparent;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    position: relative;
+    margin-bottom: 28px;
+    overflow: hidden;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.neural-button:hover .button-bg {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    transform: scale(1.02);
+}
+
+.neural-button:active .button-bg {
+    transform: scale(0.98);
+}
+
+.button-text {
+    position: relative;
+    z-index: 2;
+    transition: opacity 0.2s ease;
+}
+
+.button-loader {
+    position: absolute;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.neural-spinner {
+    display: flex;
+    gap: 4px;
+}
+
+.spinner-segment {
+    width: 4px;
+    height: 16px;
+    background: #ffffff;
+    border-radius: 2px;
+    animation: neuralSpinner 1.2s ease-in-out infinite;
+}
+
+.spinner-segment:nth-child(2) { animation-delay: 0.1s; }
+.spinner-segment:nth-child(3) { animation-delay: 0.2s; }
+
+@keyframes neuralSpinner {
+    0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+    40% { transform: scaleY(1); opacity: 1; }
+}
+
+.neural-button.loading .button-text {
+    opacity: 0;
+}
+
+.neural-button.loading .button-loader {
+    opacity: 1;
+}
+
+.button-glow {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 14px;
+    opacity: 0;
+    filter: blur(8px);
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.neural-button:hover .button-glow {
+    opacity: 0.6;
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+    body {
+        padding: 16px;
+    }
+    
+    .login-card {
+        padding: 32px 24px;
+        border-radius: 16px;
+    }
+    
+    .login-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .ai-logo {
+        width: 80px; /* ปรับขนาดโลโก้ใหญ่ขึ้นสำหรับมือถือ */
+        height: 80px; /* ปรับขนาดโลโก้ใหญ่ขึ้นสำหรับมือถือ */
+    }
+}
