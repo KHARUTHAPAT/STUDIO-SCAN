@@ -28,13 +28,12 @@ class GeofenceApp {
         
         this.target = { lat: null, lon: null, dist: null, url: null };
 
-        // ซ่อนทุกอย่างไว้ก่อน แล้วให้ loadAnnouncement เป็นผู้แสดงผล
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
-
+        
         // *** การแก้ไขที่สำคัญ: ตั้ง Title หน้าเริ่มต้นเป็น 'ประกาศ' ***
         this.pageTitle.textContent = 'ประกาศ'; 
-        
+
         this.init();
     }
 
@@ -72,16 +71,21 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         this.pageTitle.textContent = 'เมนูผู้ดูแล Studio';
+        // *** การแก้ไข UI: เปลี่ยน Body เป็น Light Mode เมื่อแสดง Menu ***
+        document.body.classList.add('light-mode'); 
     }
 
     showGeofenceChecker() {
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
+        // *** การแก้ไข UI: เปลี่ยน Body เป็น Dark Mode เมื่อแสดง Geofence ***
+        document.body.classList.remove('light-mode'); 
     }
 
     setupMenuButtons() {
-        const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5", "STUDIO"];
+        // ***** โค้ดที่เพิ่ม Studio "ประกาศ" *****
+        const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5", "ประกาศ"];
         
         studioNames.forEach(name => {
             const newButton = document.createElement('button');
@@ -94,6 +98,9 @@ class GeofenceApp {
                 <span class="button-text">เข้าสู่ ${name}</span>
                 <div class="button-glow"></div>
             `;
+            if (name === "ประกาศ") {
+                newButton.querySelector('.button-text').textContent = name; // ไม่ต้องมีคำว่า "เข้าสู่"
+            }
 
             newButton.addEventListener('click', () => {
                 window.location.href = `?studio=${encodeURIComponent(name)}`;
@@ -103,7 +110,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Announcement Logic ---
+    // --- Announcement Logic (ไม่เปลี่ยนแปลง) ---
 
     async loadAnnouncement() {
         if (!this.announcementModalOverlay) {
@@ -148,7 +155,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic ---
+    // --- Geofencing Logic (ไม่เปลี่ยนแปลง) ---
 
     async fetchGeofenceConfig() {
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
@@ -166,9 +173,9 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success) {
-                // *** การแก้ไขที่สำคัญ: ตรวจสอบว่าต้อง Geofence Check หรือไม่ ***
+                // ตรวจสอบว่าต้อง Geofence Check หรือไม่
                 if (result.needsCheck === false) {
-                     this.updateStatus('success', 'เข้าสู่ Studio', 'ข้ามการตรวจสอบตำแหน่ง (นำไปสู่แบบฟอร์ม...)');
+                     this.updateStatus('success', `${this.studioName}`, 'ข้ามการตรวจสอบตำแหน่ง (นำไปสู่แบบฟอร์ม...)');
                      setTimeout(() => {
                         window.top.location.href = result.formUrl;
                      }, 1000);
