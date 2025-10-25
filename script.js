@@ -6,7 +6,6 @@ class GeofenceApp {
         this.geofenceChecker = document.getElementById('geofenceChecker');
         this.menuButtonsContainer = document.getElementById('adminMenuButtons');
         
-        this.statusCard = document.getElementById('geoStatusCard'); // The inner card in geofenceChecker
         this.statusTitle = document.getElementById('statusTitle');
         this.statusMessage = document.getElementById('statusMessage');
         this.statusIconContainer = document.getElementById('statusIcon');
@@ -38,7 +37,7 @@ class GeofenceApp {
         this.loadAnnouncement(); // 1. แสดงประกาศ
         
         if (this.studioName) {
-            // โหมด 1: มาจากการคลิกเมนู/สแกน QR Code ที่ถูกต้อง -> ไปตรวจสอบ Geofence ทันที
+            // โหมด 1: มีพารามิเตอร์ studio -> ไปตรวจสอบ Geofence ทันที
             this.showGeofenceChecker();
             this.fetchGeofenceConfig(); 
         } else {
@@ -71,7 +70,6 @@ class GeofenceApp {
     }
 
     setupMenuButtons() {
-        // รายการปุ่มที่จะสร้าง (ต้องตรงกับ FORMS ใน Code.gs)
         const studioNames = ["Studio 1", "Studio 2", "Studio 3", "Studio 4", "Studio 5"];
         
         studioNames.forEach(name => {
@@ -87,9 +85,8 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // เมื่อคลิกปุ่ม จะ redirect ไปที่ URL หลักพร้อมพารามิเตอร์ที่ถูกต้อง
-                // การใช้ this.WEB_APP_URL ในการ redirect ทำให้เกิดการโหลดซ้ำพร้อมพารามิเตอร์
-                window.location.href = `${this.WEB_APP_URL}?studio=${encodeURIComponent(name)}`;
+                // *** การแก้ไขสำคัญ: เปลี่ยนพารามิเตอร์ของ URL ปัจจุบัน เพื่อให้หน้า Frontend รีโหลดและเริ่ม Geofence Check ***
+                window.location.href = `?studio=${encodeURIComponent(name)}`;
             });
             
             this.menuButtonsContainer.appendChild(newButton);
@@ -106,6 +103,7 @@ class GeofenceApp {
         formData.append('studio', this.studioName);
 
         try {
+            // เรียก Apps Script API
             const response = await fetch(this.WEB_APP_URL, {
                 method: 'POST',
                 body: formData
@@ -157,6 +155,7 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
+                 // **เมื่อสำเร็จจึง Redirect ไปที่ Google Form**
                  window.top.location.href = this.target.url;
             }, 1000);
 
@@ -220,6 +219,7 @@ class GeofenceApp {
             formData.append('action', 'get_announcement_image');
             formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
 
+            // เรียก Apps Script API
             const response = await fetch(this.WEB_APP_URL, {
                 method: 'POST',
                 body: formData 
