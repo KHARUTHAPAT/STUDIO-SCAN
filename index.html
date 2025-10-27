@@ -97,7 +97,7 @@
             transition: opacity 0.3s ease;
             pointer-events: none;
         }
-        /* *** แก้ไข: เพิ่ม .initial-show สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ *** */
+        /* NEW: Class สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ */
         .neural-modal-overlay.initial-show {
             opacity: 1;
             pointer-events: auto;
@@ -121,19 +121,14 @@
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             overflow: hidden;
-            display: flex; 
-            flex-direction: column; 
+            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
+            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
         }
-        .neural-modal-overlay.show .neural-modal-content {
-             transform: translateY(0);
-             opacity: 1;
-        }
-        /* *** แก้ไข: ปรับ Modal Content ให้แสดงทันทีในโหมด Initial Show *** */
+        .neural-modal-overlay.show .neural-modal-content,
         .neural-modal-overlay.initial-show .neural-modal-content {
              transform: translateY(0);
              opacity: 1;
         }
-        
         .modal-close-button {
             position: fixed; 
             top: 20px;
@@ -164,13 +159,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-grow: 1; 
-            overflow-y: auto; 
+            flex-grow: 1; /* ให้ Body ขยายได้ */
+            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
         }
         .modal-body img {
             width: 100%;
             height: auto;
-            max-height: 100%; 
+            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
             object-fit: contain; 
             border-radius: 20px; 
             margin-top: 0;
@@ -213,10 +208,21 @@
         /* แก้ไข: ลบ Padding ด้านล่างของปุ่ม Action ใน Modal */
         #announcementActionArea {
             padding: 0px 32px 0px !important; 
+            margin-top: -1px; /* ดึงขึ้นเล็กน้อยเพื่อลบขอบขาวระหว่างรูปกับปุ่ม */
+            z-index: 5; /* ให้อยู่เหนือ Modal Content เล็กน้อย */
         }
         .neural-modal-content {
             padding-bottom: 0 !important; 
         }
+        /* แก้ไข: เพิ่มสไตล์เฉพาะสำหรับปุ่ม action ใน Modal ให้ชิดขอบล่าง */
+        #announcementActionButton {
+            border-radius: 0 0 20px 20px !important;
+            min-height: 55px;
+        }
+        #announcementActionButton .button-bg {
+             border-radius: 0 0 20px 20px !important;
+        }
+
     </style>
 </head>
 <body class="light-mode">
@@ -284,8 +290,8 @@
             </div>
             
             <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
-                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px; border-radius: 0 0 20px 20px;">
-                    <div class="button-bg" style="border-radius: 0 0 12px 12px;"></div>
+                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
+                    <div class="button-bg"></div>
                     <span class="button-text">ข้อความปุ่ม</span> 
                     <div class="button-glow"></div>
                 </button>
