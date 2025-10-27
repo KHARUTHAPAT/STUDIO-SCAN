@@ -24,7 +24,7 @@ class GeofenceApp {
 
         // Configuration 
         // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz7yhhsP2LVjb7cgTQXbXmRhvA_QgPIBq9RLeQmkqXcm0iNBajc5Tlrw5ffihTBzVIv/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyBz6JISCmdhxPlcUp3MVRT-TvZlYFZzbkk6eg5iQss5tASfjYy13JRODKZYPgEb7LS/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -60,7 +60,6 @@ class GeofenceApp {
     bindEvents() {
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         
-        // ใช้ this.closeAnnouncementModal แทนการใช้ Arrow Function โดยตรง
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
@@ -206,23 +205,25 @@ class GeofenceApp {
             
             const result = await response.json();
             
+            // ใช้เงื่อนไขที่ Apps Script ส่งกลับมา
             const hasImage = result.success && result.imageUrl && result.imageUrl.trim() !== '';
-            const hasButton = result.success && result.buttonText && result.buttonUrl && result.buttonUrl.startsWith('http');
+            const hasButton = result.success && result.buttonText && result.buttonUrl; // ตรวจสอบแค่ว่ามีค่าหรือไม่ เพราะ Apps Script ตรวจสอบ http แล้ว
 
             if (hasImage || hasButton) {
                 // แสดง Modal และ Loader
                 this.announcementModalOverlay.style.display = 'flex'; 
-                this.modalLoader.style.display = 'flex'; // แสดง Loader ทันที
+                
+                // แสดง Loader เฉพาะเมื่อมีรูปภาพเท่านั้น
+                if (hasImage) {
+                    this.modalLoader.style.display = 'flex'; // แสดง Loader 
+                    this.announcementImage.src = result.imageUrl.trim(); // ตั้งค่า src เพื่อให้เริ่มโหลด
+                } else {
+                    this.modalLoader.style.display = 'none'; // ไม่มีรูปภาพ ไม่ต้องโหลด
+                }
+                
                 setTimeout(() => {
                     this.announcementModalOverlay.classList.add('show');
                 }, 50);
-                
-                // Setup Image
-                if (hasImage) {
-                    this.announcementImage.src = result.imageUrl.trim(); 
-                } else {
-                    this.modalLoader.style.display = 'none'; // No image to load, hide loader
-                }
                 
                 // Setup Button
                 if (hasButton) {
@@ -304,6 +305,7 @@ class GeofenceApp {
     // --- Geofencing Logic ---
 
     async fetchGeofenceConfig() {
+        // แสดงสถานะ Loading ของ Geofence Checker ก่อน
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
         
         const formData = new FormData();
@@ -320,11 +322,12 @@ class GeofenceApp {
             
             if (result.success) {
                 if (result.needsCheck === false) {
-                    // *** NEW BYPASS LOGIC ***
+                    // *** โหมด Bypass: ซ่อน Geofence Checker ทันที และเตรียม Redirect ***
+                    this.geofenceChecker.style.display = 'none'; 
                     this.isBypassMode = true; 
                     this.bypassUrl = result.formUrl;
                     
-                    // หากไม่ต้องการตรวจสอบ ให้แสดงประกาศ และเมื่อปิดประกาศจะเด้งไป URL ปลายทางทันที
+                    // แสดงประกาศ (หากมี) และเมื่อปิดจะ Redirect
                     this.loadAnnouncement('bypass_redirect'); 
                      return;
                 }
