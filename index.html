@@ -205,10 +205,10 @@
             40% { transform: scaleY(1); opacity: 1; }
         }
         
-        /* แก้ไข: ลบ Padding ด้านล่างของปุ่ม Action ใน Modal */
+        /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
         #announcementActionArea {
-            padding: 0px 32px 0px !important; 
-            margin-top: -1px; 
+            padding: 2px 32px 0px !important; /* เปลี่ยนจาก 0px เป็น 2px */
+            margin-top: 0; 
             z-index: 5; 
         }
         .neural-modal-content {
