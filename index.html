@@ -116,6 +116,8 @@
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             overflow: hidden;
+            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
+            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
         }
         .neural-modal-overlay.show .neural-modal-content {
              transform: translateY(0);
@@ -151,11 +153,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-grow: 1; /* ให้ Body ขยายได้ */
+            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
         }
         .modal-body img {
             width: 100%;
             height: auto;
-            max-height: 90vh;
+            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
             object-fit: contain; 
             border-radius: 20px; 
             margin-top: 0;
@@ -259,6 +263,15 @@
             <div class="modal-body">
                 <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
             </div>
+            
+            <div id="announcementActionArea" style="padding: 0px 32px 32px; width: 100%; display:none;">
+                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
+                    <div class="button-bg"></div>
+                    <span class="button-text">ข้อความปุ่ม</span> 
+                    <div class="button-glow"></div>
+                </button>
+            </div>
+            
         </div>
     </div>
 
