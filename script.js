@@ -51,6 +51,7 @@ class GeofenceApp {
         this.bindEvents();
         
         // ถ้ามี studioName ต้องระบุ action เป็น 'studio_check' เพื่อให้รู้ว่าหลังปิด Modal ต้องไปเช็คต่อ
+        // ถ้าไม่มี studioName ให้เป็น 'main_menu'
         const initialAction = this.studioName ? 'studio_check' : 'main_menu';
         
         // โหลดประกาศตั้งแต่แรก (แสดง Loader ทันที)
@@ -102,6 +103,7 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         
+        // บังคับใช้ Light Mode
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
         
@@ -117,8 +119,9 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
         
-        document.body.classList.remove('light-mode'); 
-        document.body.classList.add('dark-mode'); 
+        // *** แก้ไข: บังคับใช้ Light Mode สำหรับหน้าตรวจสอบพิกัด (ตามคำขอ) ***
+        document.body.classList.add('light-mode'); 
+        document.body.classList.remove('dark-mode'); 
     }
     
     async fetchStudioNamesAndSetupMenu() {
@@ -161,7 +164,9 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                window.location.href = `?studio=${encodeURIComponent(name)}`;
+                // *** แก้ไข: เปิดหน้าต่างใหม่สำหรับลิงก์เมนูหลัก ***
+                const url = `?studio=${encodeURIComponent(name)}`;
+                window.open(url, '_blank'); 
             });
             
             this.menuButtonsContainer.appendChild(newButton);
@@ -175,7 +180,7 @@ class GeofenceApp {
         if (!this.announcementModalOverlay) {
              if (action === 'studio_check') { this.fetchGeofenceConfig(); }
              else if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); }
-             else if (action === 'bypass_redirect' && this.bypassUrl) { window.top.location.href = this.bypassUrl; }
+             else if (action === 'bypass_redirect' && this.bypassUrl) { window.open(this.bypassUrl, '_self'); } // ใช้ _self สำหรับ redirect ปลายทาง
              else { this.continueAppFlow(); }
              return;
         }
@@ -268,11 +273,13 @@ class GeofenceApp {
             this.announcementModalOverlay.style.display = 'none';
             
             if (postAction === 'bypass_redirect' && this.bypassUrl) {
-                window.top.location.href = this.bypassUrl;
+                // ใช้ _self เพื่อให้ redirect ในหน้าต่างเดิม (ตาม Flow การใช้งาน)
+                window.open(this.bypassUrl, '_self'); 
             } else if (postAction === 'geofence_check') {
                 this.showGeofenceChecker();
                 this.checkGeolocation();
             } else if (postAction === 'studio_check') {
+                 // หลังปิดประกาศครั้งแรก ให้ไปเช็ค config ทันที
                  this.fetchGeofenceConfig();
             } else { 
                 this.continueAppFlow(); 
@@ -288,7 +295,7 @@ class GeofenceApp {
             return;
         }
 
-        // *** แก้ไข: แสดง Geofence Checker ก่อนเรียก API ***
+        // แสดง Geofence Checker ก่อนเรียก API
         this.showGeofenceChecker(); 
 
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
@@ -312,7 +319,7 @@ class GeofenceApp {
                     this.isBypassMode = true; 
                     this.bypassUrl = result.formUrl;
                     
-                    window.top.location.href = this.bypassUrl;
+                    window.open(this.bypassUrl, '_self'); 
                     return;
                 }
                 
@@ -362,7 +369,7 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
-                 window.top.location.href = this.target.url;
+                 window.open(this.target.url, '_self');
             }, 1000);
 
         } else {
