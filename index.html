@@ -97,6 +97,11 @@
             transition: opacity 0.3s ease;
             pointer-events: none;
         }
+        /* *** แก้ไข: เพิ่ม .initial-show สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ *** */
+        .neural-modal-overlay.initial-show {
+            opacity: 1;
+            pointer-events: auto;
+        }
         .neural-modal-overlay.show {
             opacity: 1;
             pointer-events: auto;
@@ -123,6 +128,12 @@
              transform: translateY(0);
              opacity: 1;
         }
+        /* *** แก้ไข: ปรับ Modal Content ให้แสดงทันทีในโหมด Initial Show *** */
+        .neural-modal-overlay.initial-show .neural-modal-content {
+             transform: translateY(0);
+             opacity: 1;
+        }
+        
         .modal-close-button {
             position: fixed; 
             top: 20px;
@@ -201,11 +212,9 @@
         
         /* แก้ไข: ลบ Padding ด้านล่างของปุ่ม Action ใน Modal */
         #announcementActionArea {
-            /* เปลี่ยน 32px 32px เป็น 0px 32px เพื่อให้ปุ่มชิดขอบล่าง */
             padding: 0px 32px 0px !important; 
         }
         .neural-modal-content {
-            /* ลบ padding-bottom ที่อาจมีผลกระทบกับปุ่ม */
             padding-bottom: 0 !important; 
         }
     </style>
@@ -255,7 +264,7 @@
         
     </div>
 
-    <div class="neural-modal-overlay" id="announcementModalOverlay">
+    <div class="neural-modal-overlay initial-show" id="announcementModalOverlay" style="display:flex;">
         <div class="login-card neural-modal-content">
             <div class="ai-glow"></div>
             <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
