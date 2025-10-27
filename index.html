@@ -198,6 +198,16 @@
             0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.8; }
             40% { transform: scaleY(1); opacity: 1; }
         }
+        
+        /* แก้ไข: ลบ Padding ด้านล่างของปุ่ม Action ใน Modal */
+        #announcementActionArea {
+            /* เปลี่ยน 32px 32px เป็น 0px 32px เพื่อให้ปุ่มชิดขอบล่าง */
+            padding: 0px 32px 0px !important; 
+        }
+        .neural-modal-content {
+            /* ลบ padding-bottom ที่อาจมีผลกระทบกับปุ่ม */
+            padding-bottom: 0 !important; 
+        }
     </style>
 </head>
 <body class="light-mode">
@@ -215,7 +225,7 @@
             <div class="ai-glow"></div>
             
             <div class="login-header" style="margin-bottom: 10px;">
-                <h1 style="font-size: 1.8rem;" id="menuTitle">เมนูผู้ดูแล Studio</h1>
+                <h1 style="font-size: 1.8rem;" id="menuTitle">ประกาศ</h1>
                 <p>เลือก Studio ที่ต้องการเข้าถึง</p>
             </div>
             
@@ -254,7 +264,7 @@
             <div class="login-header" style="margin-bottom: 10px; text-align: center;">
             </div>
             
-            <div id="modalLoader" class="neural-spinner" style="display:none;"> 
+            <div id="modalLoader" class="neural-spinner"> 
                 <div class="spinner-segment"></div>
                 <div class="spinner-segment"></div>
                 <div class="spinner-segment"></div>
@@ -264,9 +274,9 @@
                 <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
             </div>
             
-            <div id="announcementActionArea" style="padding: 0px 32px 32px; width: 100%; display:none;">
-                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
-                    <div class="button-bg"></div>
+            <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
+                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px; border-radius: 0 0 20px 20px;">
+                    <div class="button-bg" style="border-radius: 0 0 12px 12px;"></div>
                     <span class="button-text">ข้อความปุ่ม</span> 
                     <div class="button-glow"></div>
                 </button>
