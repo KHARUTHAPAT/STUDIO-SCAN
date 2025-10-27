@@ -116,8 +116,8 @@
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             overflow: hidden;
-            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
-            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
+            display: flex; 
+            flex-direction: column; 
         }
         .neural-modal-overlay.show .neural-modal-content {
              transform: translateY(0);
@@ -153,13 +153,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-grow: 1; /* ให้ Body ขยายได้ */
-            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
+            flex-grow: 1; 
+            overflow-y: auto; 
         }
         .modal-body img {
             width: 100%;
             height: auto;
-            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
+            max-height: 100%; 
             object-fit: contain; 
             border-radius: 20px; 
             margin-top: 0;
@@ -187,7 +187,7 @@
         .spinner-segment {
             width: 6px; 
             height: 25px; 
-            background: #3b82f6; /* ***** สีน้ำเงินเดิม ***** */
+            background: #3b82f6; 
             border-radius: 3px;
             animation: neuralSpinner 1.2s ease-in-out infinite;
         }
