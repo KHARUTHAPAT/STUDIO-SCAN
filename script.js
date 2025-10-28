@@ -77,16 +77,12 @@ class GeofenceApp {
         }
         
         this.announcementImage.addEventListener('load', () => { 
-             // *** แก้ไข: ลบโค้ดวิเคราะห์สีออก ***
-
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
              this.announcementModalOverlay.classList.remove('initial-show');
         });
 
         this.announcementImage.addEventListener('error', () => {
-             // *** แก้ไข: ลบโค้ดวิเคราะห์สีออก ***
-
              this.modalLoader.style.display = 'none';
              this.announcementModalOverlay.classList.remove('initial-show');
              if (this.announcementActionArea.style.display === 'none') {
@@ -111,9 +107,10 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         
-        // *** แก้ไข: ทำให้หน้าเมนูสามารถเลื่อนได้ ***
+        // *** แก้ไข: ทำให้หน้าเมนูสามารถเลื่อนได้และจัดชิดบน ***
         document.body.style.overflow = 'auto'; 
-        // -----------------------------------------
+        document.body.classList.add('menu-scrollable');
+        // -----------------------------------------------------
 
         // บังคับใช้ Light Mode
         document.body.classList.add('light-mode');
@@ -133,9 +130,10 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
 
-        // *** แก้ไข: ล็อคหน้าจอไม่ให้เลื่อนเมื่อเข้าสู่ Geofence Checker ***
+        // *** แก้ไข: ล็อคหน้าจอไม่ให้เลื่อนเมื่อเข้าสู่ Geofence Checker (ลบ Class) ***
         document.body.style.overflow = 'hidden'; 
-        // --------------------------------------------------------------
+        document.body.classList.remove('menu-scrollable');
+        // ----------------------------------------------------------------------------
         
         // *** แก้ไข: บังคับใช้ Light Mode สำหรับหน้าตรวจสอบพิกัด (ตามคำขอ) ***
         document.body.classList.add('light-mode'); 
@@ -155,8 +153,6 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.studioNames && result.studioNames.length > 0) {
-                // *** หมายเหตุ: หากต้องการเรียงลำดับปุ่มเมนู ต้องมั่นใจว่า Web App ส่งข้อมูลแบบเรียงลำดับมาแล้ว
-                // หรือเพิ่ม .sort() ที่นี่หากต้องการเรียงตามตัวอักษร
                 this.setupMenuButtons(result.studioNames);
             } else {
                 this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้ (โปรดตรวจสอบชีต \'Studio\' และสิทธิ์การเข้าถึง)</p>';
@@ -204,8 +200,6 @@ class GeofenceApp {
              else { this.continueAppFlow(); }
              return;
         }
-        
-        // *** แก้ไข: ลบการเรียก resetAnnouncementButtonColor() ออก ***
         
         if (!isInitialLoad) {
             this.announcementModalOverlay.classList.remove('show', 'initial-show');
@@ -260,8 +254,6 @@ class GeofenceApp {
                     this.announcementActionButton.querySelector('.button-text').textContent = result.buttonText.trim();
                     this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
                     this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
-                    
-                    // *** แก้ไข: ลบโค้ดวิเคราะห์สีออก ***
                 }
 
                 const loadTimeout = setTimeout(() => {
