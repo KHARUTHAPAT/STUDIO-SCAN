@@ -224,13 +224,13 @@ body.dark-mode .status-icon svg {
     left: 0;
     right: 0;
     bottom: 0;
-    background: #000000; /* พื้นหลังปุ่ม: ดำ (ค่าเดิม) */
+    background: #000000; /* พื้นหลังปุ่ม: ดำ */
     border-radius: 12px;
     transition: all 0.3s ease;
 }
 
 .neural-button:hover .button-bg {
-    background: #1f1f1f; /* Hover: ดำเข้มขึ้นเล็กน้อย (ค่าเดิม) */
+    background: #1f1f1f; /* Hover: ดำเข้มขึ้นเล็กน้อย */
     transform: scale(1.02);
 }
 
@@ -241,7 +241,7 @@ body.dark-mode .status-icon svg {
 .button-text {
     position: relative;
     z-index: 2;
-    color: #ffffff; /* ข้อความ: ขาว (ค่าเดิม) */
+    color: #ffffff; /* ข้อความ: ขาว */
     transition: opacity 0.2s ease;
 }
 
