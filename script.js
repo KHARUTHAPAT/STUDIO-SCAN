@@ -76,13 +76,8 @@ class GeofenceApp {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
         
-        this.announcementImage.addEventListener('load', async () => { // ใช้ async เพราะมีการเรียกฟังก์ชันวิเคราะห์สี
-             // *** แก้ไข: วิเคราะห์สีและปรับปุ่ม ***
-             const dominantColor = await this.getDominantColor(this.announcementImage);
-             if (dominantColor) {
-                this.updateAnnouncementButtonColor(dominantColor);
-             }
-             // ------------------------------------
+        this.announcementImage.addEventListener('load', () => { 
+             // *** แก้ไข: ลบโค้ดวิเคราะห์สีออก ***
 
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
@@ -90,9 +85,7 @@ class GeofenceApp {
         });
 
         this.announcementImage.addEventListener('error', () => {
-             // *** แก้ไข: รีเซ็ตสีปุ่มกลับไปเป็นค่าเริ่มต้น (สีดำ) ***
-             this.resetAnnouncementButtonColor();
-             // -----------------------------------------------------
+             // *** แก้ไข: ลบโค้ดวิเคราะห์สีออก ***
 
              this.modalLoader.style.display = 'none';
              this.announcementModalOverlay.classList.remove('initial-show');
@@ -162,6 +155,8 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success && result.studioNames && result.studioNames.length > 0) {
+                // *** หมายเหตุ: หากต้องการเรียงลำดับปุ่มเมนู ต้องมั่นใจว่า Web App ส่งข้อมูลแบบเรียงลำดับมาแล้ว
+                // หรือเพิ่ม .sort() ที่นี่หากต้องการเรียงตามตัวอักษร
                 this.setupMenuButtons(result.studioNames);
             } else {
                 this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้ (โปรดตรวจสอบชีต \'Studio\' และสิทธิ์การเข้าถึง)</p>';
@@ -198,107 +193,6 @@ class GeofenceApp {
         });
     }
 
-    // --- Color Analysis Logic ---
-
-    // แปลง RGB เป็น Hex
-    rgbToHex(r, g, b) {
-        return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
-    }
-
-    // คำนวณความสว่าง (Luminance)
-    getLuminance(r, g, b) {
-        // ใช้ công thức Rec. 709
-        return (0.2126 * r + 0.7152 * g + 0.0722 * b);
-    }
-
-    // กำหนดสีข้อความตามสีพื้นหลัง
-    calculateButtonTextColor(r, g, b) {
-        const luminance = this.getLuminance(r, g, b);
-        // ค่าเกณฑ์ (Threshold) ความสว่าง: 128
-        return luminance > 128 ? '#000000' : '#ffffff';
-    }
-
-    // ดึงสีเด่นจากภาพ
-    getDominantColor(imgEl) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            
-            try {
-                // ปรับขนาด Canvas ให้เล็กลงเพื่อความเร็วในการประมวลผล (เช่น 50x50)
-                const sampleSize = 50; 
-                canvas.width = sampleSize;
-                canvas.height = sampleSize;
-
-                // วาดภาพลงบน Canvas (ปรับขนาดให้เต็ม Canvas)
-                context.drawImage(imgEl, 0, 0, sampleSize, sampleSize);
-                
-                // ดึงข้อมูลพิกเซล (ทั้งหมด 50*50 = 2500 พิกเซล)
-                const imageData = context.getImageData(0, 0, sampleSize, sampleSize).data;
-                let rSum = 0, gSum = 0, bSum = 0;
-                let pixelCount = 0;
-
-                // ข้ามไปทีละ 4 (R, G, B, A)
-                for (let i = 0; i < imageData.length; i += 4) {
-                    rSum += imageData[i];
-                    gSum += imageData[i + 1];
-                    bSum += imageData[i + 2];
-                    pixelCount++;
-                }
-                
-                if (pixelCount > 0) {
-                    const avgR = Math.round(rSum / pixelCount);
-                    const avgG = Math.round(gSum / pixelCount);
-                    const avgB = Math.round(bSum / pixelCount);
-                    resolve({ r: avgR, g: avgG, b: avgB, hex: this.rgbToHex(avgR, avgG, avgB) });
-                } else {
-                    resolve(null);
-                }
-            } catch (e) {
-                // กรณีเกิด CORS error หรือปัญหาอื่น ๆ
-                console.error("Error getting dominant color:", e);
-                resolve(null); 
-            }
-        });
-    }
-
-    updateAnnouncementButtonColor(dominantColor) {
-        const buttonBg = this.announcementActionButton.querySelector('.button-bg');
-        const buttonText = this.announcementActionButton.querySelector('.button-text');
-        
-        if (buttonBg && buttonText && dominantColor) {
-            const buttonColorHex = dominantColor.hex;
-            const textColor = this.calculateButtonTextColor(dominantColor.r, dominantColor.g, dominantColor.b);
-            
-            buttonBg.style.backgroundColor = buttonColorHex;
-            buttonText.style.color = textColor;
-            this.announcementActionButton.style.color = textColor; // สำหรับ fallback
-            
-            // ปรับสี Glow ให้เข้ากับสีปุ่มใหม่ (ทำ Glow สีจางของสีหลัก)
-            const buttonGlow = this.announcementActionButton.querySelector('.button-glow');
-            if (buttonGlow) {
-                 buttonGlow.style.background = `rgba(${dominantColor.r}, ${dominantColor.g}, ${dominantColor.b}, 0.5)`;
-                 buttonGlow.style.filter = 'blur(10px)';
-            }
-        }
-    }
-
-    resetAnnouncementButtonColor() {
-        const buttonBg = this.announcementActionButton.querySelector('.button-bg');
-        const buttonText = this.announcementActionButton.querySelector('.button-text');
-        const buttonGlow = this.announcementActionButton.querySelector('.button-glow');
-        
-        if (buttonBg && buttonText) {
-            buttonBg.style.backgroundColor = '#000000'; 
-            buttonText.style.color = '#ffffff'; 
-            this.announcementActionButton.style.color = '#ffffff'; 
-        }
-        if (buttonGlow) {
-            buttonGlow.style.background = 'rgba(0, 0, 0, 0.4)'; 
-            buttonGlow.style.filter = 'blur(5px)';
-        }
-    }
-
     // --- Announcement Logic (พร้อม Timeout) ---
 
     // action: 'main_menu', 'studio_check', 'geofence_check', 'bypass_redirect'
@@ -311,7 +205,7 @@ class GeofenceApp {
              return;
         }
         
-        this.resetAnnouncementButtonColor(); // รีเซ็ตสีปุ่มก่อนโหลดใหม่
+        // *** แก้ไข: ลบการเรียก resetAnnouncementButtonColor() ออก ***
         
         if (!isInitialLoad) {
             this.announcementModalOverlay.classList.remove('show', 'initial-show');
@@ -355,7 +249,6 @@ class GeofenceApp {
                 
                 if (hasImage) {
                     this.announcementImage.src = result.imageUrl.trim(); 
-                    // Note: การวิเคราะห์สีจะเกิดขึ้นใน eventListener 'load' ของ announcementImage
                 } else {
                     this.modalLoader.style.display = 'none'; 
                     this.announcementModalOverlay.classList.remove('initial-show'); 
@@ -367,11 +260,8 @@ class GeofenceApp {
                     this.announcementActionButton.querySelector('.button-text').textContent = result.buttonText.trim();
                     this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
                     this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
-
-                    // ถ้าไม่มีรูปภาพ ให้รีเซ็ตสีปุ่มเป็นสีดำปกติ (เนื่องจากไม่มีรูปให้วิเคราะห์)
-                    if (!hasImage) {
-                        this.resetAnnouncementButtonColor();
-                    }
+                    
+                    // *** แก้ไข: ลบโค้ดวิเคราะห์สีออก ***
                 }
 
                 const loadTimeout = setTimeout(() => {
@@ -384,8 +274,6 @@ class GeofenceApp {
                     } else if (isImageLoading && hasButton) {
                         this.announcementImage.src = '';
                         this.modalLoader.style.display = 'none';
-                        // ในกรณี Timeout และมีปุ่ม แต่รูปไม่โหลด ให้กลับไปใช้สีปุ่มดำปกติ
-                        this.resetAnnouncementButtonColor(); 
                     }
                 }, 5000); 
                 
