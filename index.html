@@ -17,14 +17,14 @@
             /* ลบ: overflow: hidden !important; */ 
         }
         
-        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (ทำให้ไม่กินขอบบน) *** */
+        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (แก้ไขการกินขอบ) *** */
         body.menu-scrollable {
             /* ยกเลิกการจัดให้อยู่ตรงกลางของ Body */
-            align-items: flex-start !important; 
-            justify-content: center !important;
+            align-items: flex-start !important; /* จัดชิดด้านบน */
+            justify-content: center !important; /* ยังคงจัดอยู่ตรงกลางแนวนอน */
             padding-top: 20px; /* เพิ่ม padding ด้านบนให้มีระยะห่าง */
             padding-bottom: 20px; /* เพิ่ม padding ด้านล่าง */
-            min-height: 100vh; /* ต้องมี min-height เพื่อให้เลื่อนได้ */
+            min-height: 100vh; 
         }
         
         /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
