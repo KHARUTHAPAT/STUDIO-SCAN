@@ -3,18 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title id="pageTitle">ประกาศ</title> 
+    <title id="pageTitle">ประกาศ</title>
     
     <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
     
     <link rel="stylesheet" href="style.css">
     <style>
         /* ============================================== */
-        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน => *** ลบโค้ดส่วนนี้ออก ให้ JS ควบคุมแทน *** */
+        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
         /* ============================================== */
         html, body {
             height: 100%;
             /* ลบ: overflow: hidden !important; */ 
+        }
+        
+        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (ทำให้ไม่กินขอบบน) *** */
+        body.menu-scrollable {
+            /* ยกเลิกการจัดให้อยู่ตรงกลางของ Body */
+            align-items: flex-start !important; 
+            justify-content: center !important;
+            padding-top: 20px; /* เพิ่ม padding ด้านบนให้มีระยะห่าง */
+            padding-bottom: 20px; /* เพิ่ม padding ด้านล่าง */
+            min-height: 100vh; /* ต้องมี min-height เพื่อให้เลื่อนได้ */
         }
         
         /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
@@ -240,7 +250,7 @@
             <div class="ai-glow"></div>
             
             <div class="login-header" style="margin-bottom: 10px;">
-                <h1 style="font-size: 1.8rem;" id="menuTitle">ประกาศ</h1> 
+                <h1 style="font-size: 1.8rem;" id="menuTitle">ประกาศ</h1>
                 <p>เลือก Studio ที่ต้องการเข้าถึง</p>
             </div>
             
@@ -286,7 +296,7 @@
             </div>
             
             <div class="modal-body">
-                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;" crossorigin="anonymous">
+                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
             </div>
             
             <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
