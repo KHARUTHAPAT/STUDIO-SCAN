@@ -110,7 +110,11 @@ class GeofenceApp {
         // *** แก้ไข: ทำให้หน้าเมนูสามารถเลื่อนได้และจัดชิดบน ***
         document.body.style.overflow = 'auto'; 
         document.body.classList.add('menu-scrollable');
-        // -----------------------------------------------------
+        
+        // NEW: บังคับให้ Menu Card (login-container/status-card) เริ่มต้นที่ขอบบน
+        this.mainMenuCard.style.marginTop = '0';
+        document.getElementById('mainContainerWrapper').style.marginTop = '0';
+        // -------------------------------------------------------------------------
 
         // บังคับใช้ Light Mode
         document.body.classList.add('light-mode');
@@ -130,9 +134,11 @@ class GeofenceApp {
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
 
-        // *** แก้ไข: ล็อคหน้าจอไม่ให้เลื่อนเมื่อเข้าสู่ Geofence Checker (ลบ Class) ***
+        // *** แก้ไข: ล็อคหน้าจอไม่ให้เลื่อนเมื่อเข้าสู่ Geofence Checker (ลบ Class และรีเซ็ต margin) ***
         document.body.style.overflow = 'hidden'; 
         document.body.classList.remove('menu-scrollable');
+        this.mainMenuCard.style.marginTop = '';
+        document.getElementById('mainContainerWrapper').style.marginTop = '';
         // ----------------------------------------------------------------------------
         
         // *** แก้ไข: บังคับใช้ Light Mode สำหรับหน้าตรวจสอบพิกัด (ตามคำขอ) ***
