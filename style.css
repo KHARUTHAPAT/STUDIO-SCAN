@@ -13,7 +13,7 @@ body {
     background: #f8fafc; /* DEFAULT: สีขาว (สำหรับ Menu) */
     min-height: 100vh;
     height: 100%; /* ล็อคความสูง */
-    overflow: hidden !important; /* ล็อคการเลื่อน */
+    /* *** แก้ไข: ลบ overflow: hidden !important; ออกจาก body เพื่อให้ JS ควบคุม/ Menu เลื่อนได้ *** */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -199,8 +199,8 @@ body.dark-mode .status-icon svg {
 /* Neural Button */
 .neural-button {
     width: 100%;
-    background: transparent;
-    color: #ffffff; /* ข้อความ: ขาว */
+    /* *** แก้ไข: เปลี่ยนสีเริ่มต้นของปุ่มเป็นขาว เพื่อให้ JS ควบคุมได้ง่ายขึ้น *** */
+    color: #ffffff; 
     border: none;
     border-radius: 12px;
     padding: 0;
@@ -217,20 +217,21 @@ body.dark-mode .status-icon svg {
     justify-content: center;
 }
 
-/* ***** การแก้ไขสำคัญ: ปุ่มสีดำ (พื้นหลังเป็นสีดำถาวร) ***** */
+/* ***** การแก้ไขสำคัญ: ปุ่มสีดำ (พื้นหลังเป็นสีดำถาวร) => *** ให้ JS ควบคุมแทน *** ***** */
 .button-bg {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: #000000; /* พื้นหลังปุ่ม: ดำ */
+    background: #000000; /* กำหนดสีเริ่มต้นเป็นดำ เพื่อให้ไม่เสียสไตล์เริ่มต้น */
     border-radius: 12px;
     transition: all 0.3s ease;
 }
 
 .neural-button:hover .button-bg {
-    background: #1f1f1f; /* Hover: ดำเข้มขึ้นเล็กน้อย */
+    /* ปรับให้ใช้สีเข้มขึ้นเล็กน้อยของสีปัจจุบัน */
+    background: #1f1f1f; 
     transform: scale(1.02);
 }
 
@@ -241,7 +242,8 @@ body.dark-mode .status-icon svg {
 .button-text {
     position: relative;
     z-index: 2;
-    transition: opacity 0.2s ease;
+    color: inherit; /* ให้ใช้สีจาก .neural-button */
+    transition: opacity 0.2s ease, color 0.3s ease; /* เพิ่ม transition ให้สีข้อความ */
 }
 
 /* ลบ Glow สีน้ำเงินออกเพื่อให้เข้ากับสีดำ */
@@ -249,6 +251,7 @@ body.dark-mode .status-icon svg {
     /* ใช้สีดำจางๆ เพื่อทำ Glow แทนสีน้ำเงิน */
     background: rgba(0, 0, 0, 0.4); 
     filter: blur(5px);
+    transition: opacity 0.3s ease, background 0.3s ease; /* เพิ่ม transition ให้ Glow */
 }
 .neural-button:hover .button-glow {
     opacity: 0.8;
