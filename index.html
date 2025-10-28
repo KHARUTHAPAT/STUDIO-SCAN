@@ -1,315 +1,272 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title id="pageTitle">ประกาศ</title>
+/* Login Form - Complete & Self-Contained */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    /* ใช้ฟอนต์เดิม */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
     
-    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
+    background: #f8fafc; /* DEFAULT: สีขาว (สำหรับ Menu) */
+    min-height: 100vh;
+    height: 100%; /* ล็อคความสูง */
+    /* *** แก้ไข: ลบ overflow: hidden !important; ออกจาก body เพื่อให้ JS ควบคุม/ Menu เลื่อนได้ *** */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    line-height: 1.5;
+    position: relative;
+    transition: background 0.3s ease; 
+}
+
+/* ============================================== */
+/* ***** โหมด DARK (สำหรับ Geofence Checker เท่านั้น) ***** */
+/* ============================================== */
+
+/* เปลี่ยนเป็น Dark Mode เมื่อ Geofence Checker ทำงาน (พื้นหลังดำ/ข้อความขาว) */
+body.dark-mode {
+    background: #0a0a0f; /* พื้นหลัง: ดำ */
+}
+
+body.dark-mode .status-card {
+    background: rgba(15, 15, 20, 0.95); /* Card: ดำ */
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+body.dark-mode .status-card h1 {
+    color: #f8fafc; /* หัวข้อ: ขาว */
+}
+
+body.dark-mode .status-card p {
+    color: #94a3b8; /* คำบรรยาย: เทาอ่อน */
+}
+
+body.dark-mode .neural-node {
+    background: #3b82f6; 
+    opacity: 0.6;
+}
+body.dark-mode .ai-glow {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+}
+body.dark-mode .status-icon svg {
+    color: #3b82f6; 
+}
+
+/* ============================================== */
+/* ***** โหมด LIGHT (สำหรับ Menu หลัก) ***** */
+/* ============================================== */
+
+/* สีเริ่มต้นของส่วนประกอบใน Light Mode */
+.neural-node {
+    background: #3b82f6;
+    border-radius: 50%;
+    opacity: 0.2; /* opacity น้อยลงใน Light Mode */
+    animation: neuralPulse 4s ease-in-out infinite;
+}
+
+.status-card {
+    background: #ffffff; /* Card: ขาว */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease; 
+}
+
+.status-card h1 {
+    color: #000000; /* หัวข้อ: ดำ */
+}
+
+.status-card p {
+    color: #475569; /* คำบรรยาย: เทาเข้ม */
+}
+
+.status-icon svg {
+    color: #3b82f6; /* Icon สีน้ำเงิน */
+}
+
+/* (โค้ดส่วน Neural Background อื่นๆ ถูกละไว้) */
+
+.login-container {
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+}
+
+.login-card {
+    /* ใช้สำหรับ Modal และเป็นพื้นฐาน */
+    background: rgba(15, 15, 20, 0.95); /* Default: Dark Card */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 20px;
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease; 
+}
+
+/* --- Modal Announcement Styles --- */
+
+.neural-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 1000; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.neural-modal-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+.neural-modal-content {
+    background: #000; 
+    border: none;
+    padding: 0; 
+    border-radius: 20px; 
+    max-width: 90vw; 
+    width: 400px;
+    height: auto;
+    max-height: 90vh;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    position: relative;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    overflow: hidden;
+}
+.neural-modal-overlay.show .neural-modal-content {
+     transform: translateY(0);
+     opacity: 1;
+}
+.modal-close-button {
+    position: fixed; 
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.5); 
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    z-index: 1010; 
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-close-button:hover {
+    background: #fff;
+    color: #000;
+}
+.modal-body {
+    padding: 0; 
+    line-height: 0; 
+}
+.modal-body img {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    object-fit: contain; 
+    border-radius: 20px; 
+    margin-top: 0;
+}
+.login-header {
+    display: none; 
+}
+
+
+/* Neural Button */
+.neural-button {
+    width: 100%;
+    background: transparent;
+    color: #ffffff; /* ข้อความ: ขาว */
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    position: relative;
+    margin-bottom: 28px;
+    overflow: hidden;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ***** การแก้ไขสำคัญ: ปุ่มสีดำ (พื้นหลังเป็นสีดำถาวร) ***** */
+.button-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000000; /* พื้นหลังปุ่ม: ดำ */
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.neural-button:hover .button-bg {
+    background: #1f1f1f; /* Hover: ดำเข้มขึ้นเล็กน้อย */
+    transform: scale(1.02);
+}
+
+.neural-button:active .button-bg {
+    transform: scale(0.98);
+}
+
+.button-text {
+    position: relative;
+    z-index: 2;
+    color: #ffffff; /* ข้อความ: ขาว */
+    transition: opacity 0.2s ease;
+}
+
+/* ลบ Glow สีน้ำเงินออกเพื่อให้เข้ากับสีดำ */
+.button-glow {
+    /* ใช้สีดำจางๆ เพื่อทำ Glow แทนสีน้ำเงิน */
+    background: rgba(0, 0, 0, 0.4); 
+    filter: blur(5px);
+}
+.neural-button:hover .button-glow {
+    opacity: 0.8;
+}
+
+/* Mobile Responsive (โค้ดเดิม) */
+@media (max-width: 480px) {
+    body {
+        padding: 16px;
+    }
     
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* ============================================== */
-        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
-        /* ============================================== */
-        html, body {
-            height: 100%;
-            /* ลบ: overflow: hidden !important; */ 
-        }
-        
-        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (แก้ไขการกินขอบ) *** */
-        body.menu-scrollable {
-            /* ยกเลิกการจัดให้อยู่ตรงกลางของ Body */
-            align-items: flex-start !important; /* จัดชิดด้านบน */
-            justify-content: center !important; /* ยังคงจัดอยู่ตรงกลางแนวนอน */
-            padding-top: 20px; /* เพิ่ม padding ด้านบนให้มีระยะห่าง */
-            padding-bottom: 20px; /* เพิ่ม padding ด้านล่าง */
-            min-height: 100vh; 
-        }
-        
-        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
-        /* สีเริ่มต้นของ Card ถูกตั้งเป็น Light Mode ใน style.css */
-        .status-card {
-            background: #ffffff;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 20px;
-            padding: 40px 32px;
-            position: relative;
-            text-align: center;
-            width: 100%;
-            max-width: 420px;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        }
-        .status-card h1 {
-            color: #000000; 
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-        }
-        .status-card p {
-            color: #475569; 
-            font-size: 1rem;
-            margin-bottom: 20px;
-        }
-        .status-icon {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .status-icon svg {
-            color: #3b82f6; 
-            width: 100%;
-            height: 100%;
-        }
-
-        /* เมนูแอดมิน */
-        #adminMenuButtons {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .neural-button {
-            text-decoration: none;
-            min-height: 55px;
-        }
-        
-        /* สไตล์สำหรับ Geofencing Status Card */
-        #geofenceChecker {
-            display: none;
-            width: 100%;
-        }
-        
-        /* สไตล์สำหรับ Modal (Announcement) */
-        .neural-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        /* NEW: Class สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ */
-        .neural-modal-overlay.initial-show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .neural-modal-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .neural-modal-content {
-            background: #000;
-            border: none;
-            padding: 0;
-            border-radius: 20px;
-            max-width: 90vw;
-            width: 400px;
-            height: auto;
-            max-height: 90vh;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            position: relative;
-            transform: translateY(20px);
-            opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            overflow: hidden;
-            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
-            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
-        }
-        .neural-modal-overlay.show .neural-modal-content,
-        .neural-modal-overlay.initial-show .neural-modal-content {
-             transform: translateY(0);
-             opacity: 1;
-        }
-        .modal-close-button {
-            position: fixed; 
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.5); 
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            z-index: 1010; 
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            font-size: 22px;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-close-button:hover {
-            background: #fff;
-            color: #000;
-        }
-        .modal-body {
-            padding: 0; 
-            line-height: 0; 
-            position: relative; 
-            min-height: 150px; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1; /* ให้ Body ขยายได้ */
-            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
-        }
-        .modal-body img {
-            width: 100%;
-            height: auto;
-            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
-            object-fit: contain; 
-            border-radius: 20px; 
-            margin-top: 0;
-        }
-        .login-header {
-            display: none; 
-        }
-
-        /* NEW: สไตล์สำหรับ Modal Loader */
-        #modalLoader {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10;
-        }
-        .neural-spinner {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-            justify-content: center;
-            width: 40px; 
-            height: 40px;
-        }
-        .spinner-segment {
-            width: 6px; 
-            height: 25px; 
-            background: #3b82f6; 
-            border-radius: 3px;
-            animation: neuralSpinner 1.2s ease-in-out infinite;
-        }
-        .spinner-segment:nth-child(2) { animation-delay: 0.1s; }
-        .spinner-segment:nth-child(3) { animation-delay: 0.2s; }
-
-        @keyframes neuralSpinner {
-            0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.8; }
-            40% { transform: scaleY(1); opacity: 1; }
-        }
-        
-        /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
-        #announcementActionArea {
-            padding: 2px 32px 0px !important; /* เปลี่ยนจาก 0px เป็น 2px */
-            margin-top: 0; 
-            z-index: 5; 
-        }
-        .neural-modal-content {
-            padding-bottom: 0 !important; 
-        }
-        /* แก้ไข: เพิ่มสไตล์เฉพาะสำหรับปุ่ม action ใน Modal ให้ชิดขอบล่าง */
-        #announcementActionButton {
-            border-radius: 0 0 20px 20px !important;
-            min-height: 55px;
-        }
-        #announcementActionButton .button-bg {
-             border-radius: 0 0 20px 20px !important;
-        }
-
-    </style>
-</head>
-<body class="light-mode">
-    <div class="neural-background">
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-    </div>
-
-    <div class="login-container" id="mainContainerWrapper" style="display:flex;">
-        
-        <div class="status-card" id="mainMenuCard" style="display:none;"> 
-            <div class="ai-glow"></div>
-            
-            <div class="login-header" style="margin-bottom: 10px;">
-                <h1 style="font-size: 1.8rem;" id="menuTitle">ประกาศ</h1>
-                <p>เลือก Studio ที่ต้องการเข้าถึง</p>
-            </div>
-            
-            <div id="adminMenuButtons">
-                </div>
-            
-        </div>
-        
-        <div class="status-card" id="geofenceChecker">
-             <div class="ai-glow"></div>
-            
-            <div class="status-icon" id="statusIcon">
-                <svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
-                </svg>
-            </div>
-            
-            <h1 id="statusTitle">กำลังตรวจสอบตำแหน่ง Studio...</h1> 
-            <p id="statusMessage">โปรดอนุญาตให้เข้าถึงตำแหน่ง GPS ของคุณ</p>
-
-            <button class="neural-button" id="retryButton" style="display:none; margin-bottom: 0;">
-                <div class="button-bg"></div>
-                <span class="button-text">ลองใหม่อีกครั้ง</span>
-                <div class="button-glow"></div>
-            </button>
-        </div>
-        
-    </div>
-
-    <div class="neural-modal-overlay initial-show" id="announcementModalOverlay" style="display:flex;">
-        <div class="login-card neural-modal-content">
-            <div class="ai-glow"></div>
-            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
-                &times;
-            </button>
-            <div class="login-header" style="margin-bottom: 10px; text-align: center;">
-            </div>
-            
-            <div id="modalLoader" class="neural-spinner"> 
-                <div class="spinner-segment"></div>
-                <div class="spinner-segment"></div>
-                <div class="spinner-segment"></div>
-            </div>
-            
-            <div class="modal-body">
-                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
-            </div>
-            
-            <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
-                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
-                    <div class="button-bg"></div>
-                    <span class="button-text">ข้อความปุ่ม</span> 
-                    <div class="button-glow"></div>
-                </button>
-            </div>
-            
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+    .login-card {
+        padding: 32px 24px;
+        border-radius: 16px;
+    }
+    
+    .login-header h1 {
+        font-size: 1.5rem;
+    }
+}
