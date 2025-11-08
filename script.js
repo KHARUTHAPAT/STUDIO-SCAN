@@ -2,6 +2,7 @@
 class GeofenceApp {
     constructor() {
         // UI Elements
+        this.mainContainerWrapper = document.getElementById('mainContainerWrapper');
         this.mainMenuCard = document.getElementById('mainMenuCard');
         this.geofenceChecker = document.getElementById('geofenceChecker');
         this.menuButtonsContainer = document.getElementById('adminMenuButtons');
@@ -176,6 +177,7 @@ class GeofenceApp {
     // --- UI/Mode Handlers ---
 
     showMainMenu() {
+        this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         
@@ -202,6 +204,7 @@ class GeofenceApp {
     }
 
     showGeofenceChecker() {
+        this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
