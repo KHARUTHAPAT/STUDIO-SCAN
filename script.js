@@ -47,16 +47,17 @@ class GeofenceApp {
         this.isAnnouncementActive = false; // NEW: สถานะ Modal ปัจจุบัน
         this.countdownInterval = null; // NEW: ตัวแปรเก็บ Interval สำหรับนับถอยหลัง
 
-        // *** ล็อคชั้นที่ 1: ซ่อนทุกอย่างที่เกี่ยวกับหน้าหลักไว้ตั้งแต่เริ่มต้น (ใช้ CSS Inline ใน HTML) ***
+        // *** FIXED: ซ่อนทุกอย่างที่เกี่ยวกับหน้าหลักไว้ตั้งแต่เริ่มต้น ***
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
+        this.mainContainerWrapper.style.display = 'none'; 
         
         this.pageTitle.textContent = 'ประกาศ'; // ชื่อหน้า: แสดง "ประกาศ"
         
         // *** FIX: ซ่อนปุ่มกากบาทไว้ตั้งแต่แรก (ใช้ JS/CSS เพื่อแสดงผล) ***
         this.closeAnnouncementButton.style.display = 'none'; 
         
-        // *** FIX: บังคับให้ Body เป็น Light Mode (พื้นหลังขาว) เสมอ ***
+        // *** FIXED: บังคับให้ Body เป็น Light Mode (พื้นหลังขาว) เสมอ ***
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
         document.body.style.backgroundColor = '#f8fafc'; // สีขาวตาม Light Mode CSS
@@ -72,15 +73,16 @@ class GeofenceApp {
     init() {
         this.bindEvents();
         
-        // 1. ถ้ามี studioName (Child Page Flow)
+        // 1. ถ้ามี studioName (จากการรีเฟรชลิงก์แต่ละปุ่ม) ต้องเข้าสู่ flow Studio
         if (this.studioName) {
             // Action หลังปิดประกาศ: 'geofence_check' (เพื่อบังคับให้ไป checkGeolocation ทันที)
             this.loadStudioConfigAndAnnouncement('geofence_check');
         } else {
-            // 2. ถ้าไม่มี studioName (Main Menu/Admin Page)
+            // 2. ถ้าไม่มี studioName ให้แสดง Menu หลัก (Initial Load: Admin Mode)
             
             // Action หลังปิดประกาศ: 'main_menu' (เพื่อไป showMainMenu)
             const initialAction = 'main_menu';
+            // NEW: กำหนดให้เป็นค่าควบคุมปกติ (แสดงปุ่มกากบาททันที)
             const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
             
             this.loadAnnouncement(initialAction, true, initialControl); 
@@ -138,28 +140,6 @@ class GeofenceApp {
     
     // --- App Flow Control ---
 
-    // *** ล็อคชั้นที่ 3: Redirect Fail-Safe สำหรับ Child Page ***
-    // ฟังก์ชันนี้จะถูกเรียกเมื่อ Flow ควรจะไป Main Menu แต่เราอยู่ใน Child Page
-    redirectToMainMenu() {
-        // ถ้ามี studioName หมายความว่าเราอยู่ใน Child Page
-        if (this.studioName) {
-            // ปิดหน้าต่างตัวเอง เพราะไม่ควรมี Flow ให้กลับมา Main Menu ในหน้า Child Page
-            window.close(); 
-            // หรือในกรณีที่ window.close ถูกบล็อค, เราจะ Redirect ไป URL หลัก
-            window.location.href = window.location.origin + window.location.pathname; 
-        } else {
-            // ถ้าไม่มี studioName ให้แสดง Main Menu ตามปกติ (สำหรับหน้า Admin)
-            this.showMainMenu();
-        }
-    }
-
-    // *** แก้ไข: เปลี่ยน continueAppFlow() ให้เรียก redirectToMainMenu() สำหรับการล็อค ***
-    continueAppFlow() {
-        this.isBypassMode = false;
-        this.bypassUrl = null;
-        this.redirectToMainMenu(); // ใช้ฟังก์ชันล็อค
-    }
-    
     // NEW FUNCTION: จัดการ Flow สำหรับ Studio
     async loadStudioConfigAndAnnouncement(action) {
         // 1. ดึงค่า config จาก Apps Script (รวมถึง D และ E)
@@ -180,6 +160,7 @@ class GeofenceApp {
         } else {
             this.announcementControl = { hideCloseBtn: false, countdownSec: 0 }; 
             if (action === 'geofence_check') {
+                // *** FIX: หากดึงข้อมูล Studio ไม่ได้ ให้ Child Page Redirect ตัวเองกลับไปหน้า Admin ***
                 alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
                 window.location.href = window.location.origin + window.location.pathname; 
                 return;
@@ -196,9 +177,19 @@ class GeofenceApp {
         this.loadAnnouncement(action, true, this.announcementControl); 
     }
     
+    // *** FIXED: เปลี่ยน continueAppFlow() ให้เรียก showMainMenu() ถ้าไม่มี studioName ***
+    continueAppFlow() {
+        this.isBypassMode = false;
+        this.bypassUrl = null;
+        if (!this.studioName) { // เฉพาะหน้า Admin เท่านั้นที่ควรแสดง Main Menu
+             this.showMainMenu();
+        }
+        // ถ้ามี studioName (Child Page) แต่ถูกเรียก continueAppFlow() จะไม่เกิดอะไรขึ้น (หน้าจอยังเป็นประกาศ)
+        // แต่ใน Flow ปกติ จะไม่ถูกเรียกจาก Child Page แล้ว
+    }
+    
     // --- UI/Mode Handlers ---
 
-    // *** showMainMenu ถูกใช้เฉพาะในหน้า Admin เท่านั้น ***
     showMainMenu() {
         // *** แก้ไข: บังคับให้เป็น Light Mode เมื่อเข้าสู่หน้าเมนูหลัก ***
         document.body.classList.add('light-mode'); 
@@ -227,7 +218,6 @@ class GeofenceApp {
         this.fetchStudioNamesAndSetupMenu();
     }
 
-    // *** showGeofenceChecker ถูกใช้เพื่อแสดงหน้าตรวจสอบพิกัดใน Child Page/หน้า Admin ***
     showGeofenceChecker() {
         // *** แก้ไข: บังคับให้เป็น Light Mode/พื้นหลังขาว เมื่อเข้าสู่หน้า Geofence Checker ***
         document.body.classList.add('light-mode'); 
