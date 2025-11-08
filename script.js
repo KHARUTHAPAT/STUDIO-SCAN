@@ -16,6 +16,7 @@ class GeofenceApp {
         this.announcementModalOverlay = document.getElementById('announcementModalOverlay');
         this.announcementImage = document.getElementById('announcementImage');
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
+        this.countdownText = document.getElementById('countdownText'); // NEW: สำหรับแสดงเวลานับถอยหลัง
         this.modalLoader = document.getElementById('modalLoader'); 
         
         // NEW: Announcement Button Elements
@@ -24,7 +25,7 @@ class GeofenceApp {
 
         // Configuration 
         // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyBz6JISCmdhxPlcUp3MVRT-TvZlYFZzbkk6eg5iQss5tASfjYy13JRODKZYPgEb7LS/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqxAJVdNuARRDychtqKo6KL7zOoqrG3hGD4UhFqgrH0HWtRimILc4DiBgGAzDhM7JI/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -35,6 +36,14 @@ class GeofenceApp {
 
         this.isBypassMode = false;
         this.bypassUrl = null; 
+        
+        // NEW: ตัวแปรสำหรับควบคุม Announcement
+        this.announcementControl = {
+            hideCloseBtn: false, // D: 1=ซ่อนปุ่มกากบาท
+            countdownSec: 0 // E: วินาทีนับถอยหลังก่อนแสดงปุ่มกากบาท
+        };
+        this.isAnnouncementActive = false; // NEW: สถานะ Modal ปัจจุบัน
+        this.countdownInterval = null; // NEW: ตัวแปรเก็บ Interval สำหรับนับถอยหลัง
 
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
@@ -59,7 +68,9 @@ class GeofenceApp {
         const initialAction = this.studioName ? 'studio_check' : 'main_menu';
         
         // โหลดประกาศตั้งแต่แรก (แสดง Loader ทันที)
-        this.loadAnnouncement(initialAction, true); 
+        // ส่งค่าควบคุมเริ่มต้น: ไม่ซ่อนปุ่ม, ไม่นับถอยหลัง
+        const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
+        this.loadAnnouncement(initialAction, true, initialControl); 
     }
     
     _onAnnouncementButtonClick = (event) => {
@@ -76,19 +87,32 @@ class GeofenceApp {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
         
+        // NEW: เมื่อภาพโหลดเสร็จ (สำเร็จ)
         this.announcementImage.addEventListener('load', () => { 
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
              this.announcementModalOverlay.classList.remove('initial-show');
+             
+             // NEW: เรียกฟังก์ชันควบคุมปุ่มปิด
+             const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+             this.startCloseButtonControl(postAction);
         });
 
+        // NEW: เมื่อภาพโหลดเสร็จ (ล้มเหลว)
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
              this.announcementModalOverlay.classList.remove('initial-show');
-             if (this.announcementActionArea.style.display === 'none') {
+             this.announcementImage.style.display = 'none'; 
+             
+             // NEW: เรียกฟังก์ชันควบคุมปุ่มปิด
+             const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+             this.startCloseButtonControl(postAction);
+
+             // หากไม่มีปุ่ม Action ให้ปิด Modal เลย (สำหรับกรณีที่ไม่มีทั้งรูปและปุ่ม)
+             if (this.announcementActionArea.style.display === 'none' && !this.announcementImage.src) {
+                 this.isAnnouncementActive = false;
                  this.closeAnnouncementModal(); 
              }
-             this.announcementImage.style.display = 'none'; 
              console.error("Announcement Image failed to load or permission denied.");
         });
     }
@@ -198,13 +222,28 @@ class GeofenceApp {
     // --- Announcement Logic (พร้อม Timeout) ---
 
     // action: 'main_menu', 'studio_check', 'geofence_check', 'bypass_redirect'
-    async loadAnnouncement(action, isInitialLoad = false) {
+    // control: { hideCloseBtn: boolean, countdownSec: number } - สำหรับ Initial Load
+    async loadAnnouncement(action, isInitialLoad = false, control = null) {
+        
+        // NEW: หากมีการส่งค่า control มาให้ใช้เลย (สำหรับ Initial Load)
+        if (control) {
+             this.announcementControl = control;
+        }
+
         if (!this.announcementModalOverlay) {
-             if (action === 'studio_check') { this.fetchGeofenceConfig(); }
-             else if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); }
-             else if (action === 'bypass_redirect' && this.bypassUrl) { window.open(this.bypassUrl, '_self'); } // ใช้ _self สำหรับ redirect ปลายทาง
-             else { this.continueAppFlow(); }
+             // NEW: หากไม่มี Modal ให้ไปต่อทันที
+             this.startCloseButtonControl(action);
              return;
+        }
+        
+        this.isAnnouncementActive = true; // NEW: กำหนดสถานะ Modal
+        this.closeAnnouncementButton.style.display = 'none'; // NEW: ซ่อนปุ่มปิดทันที
+        this.countdownText.style.display = 'none'; // NEW: ซ่อนตัวนับ
+
+        // NEW: เคลียร์ Interval เก่าก่อนเริ่ม
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
         }
         
         if (!isInitialLoad) {
@@ -245,6 +284,7 @@ class GeofenceApp {
             const hasImage = result.success && result.imageUrl && result.imageUrl.trim() !== '';
             const hasButton = result.success && result.buttonText && result.buttonUrl; 
 
+            // ประกาศจะไม่หายเองอัตโนมัติอีกต่อไป (รอผู้ใช้กดปุ่มกากบาทหรือปุ่ม Action เท่านั้น)
             if (hasImage || hasButton) {
                 
                 if (hasImage) {
@@ -252,6 +292,8 @@ class GeofenceApp {
                 } else {
                     this.modalLoader.style.display = 'none'; 
                     this.announcementModalOverlay.classList.remove('initial-show'); 
+                    // NEW: หากไม่มีภาพ ให้เรียก startCloseButtonControl ทันที
+                    this.startCloseButtonControl(action); 
                 }
                 
                 if (hasButton) {
@@ -264,35 +306,97 @@ class GeofenceApp {
 
                 const loadTimeout = setTimeout(() => {
                     const isImageLoading = hasImage && (this.modalLoader.style.display !== 'none' || this.announcementImage.style.display === 'none');
-                    if (isImageLoading && !hasButton) {
-                        console.warn("Announcement load timeout. Skipping image and continuing flow.");
+                    if (isImageLoading) { 
+                        console.warn("Announcement load timeout. Skipping image and calling control flow.");
                         this.announcementImage.src = ''; 
                         this.modalLoader.style.display = 'none';
-                        this.closeAnnouncementModal(); 
-                    } else if (isImageLoading && hasButton) {
-                        this.announcementImage.src = '';
-                        this.modalLoader.style.display = 'none';
+                        // NEW: หาก Time out ให้เรียก startCloseButtonControl
+                        this.startCloseButtonControl(action);
                     }
                 }, 5000); 
                 
             } else {
+                this.isAnnouncementActive = false; // NEW: ตั้งสถานะเป็นปิดก่อนเรียก close
                 this.closeAnnouncementModal();
             }
         } catch (error) {
             console.error('Error fetching announcement:', error);
+            this.isAnnouncementActive = false; // NEW: ตั้งสถานะเป็นปิดก่อนเรียก close
             this.closeAnnouncementModal();
         }
     }
+    
+    // NEW: ฟังก์ชันสำหรับควบคุมการแสดงปุ่มปิดและนับถอยหลัง (D และ E)
+    startCloseButtonControl(action) {
+        if (!this.announcementModalOverlay) {
+             // ถ้า Modal ไม่มีอยู่ ให้ทำตาม Action ที่ได้รับมา
+             if (action === 'studio_check') { this.fetchGeofenceConfig(); }
+             else if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); }
+             else if (action === 'bypass_redirect' && this.bypassUrl) { window.open(this.bypassUrl, '_self'); } 
+             else { this.continueAppFlow(); }
+             return;
+        }
+        
+        this.announcementModalOverlay.setAttribute('data-post-action', action);
+        
+        if (!this.isAnnouncementActive) {
+            // Modal ปิดไปแล้ว/ไม่มีเนื้อหา ให้ทำตาม Action ที่ได้รับมา
+             if (action === 'studio_check') { this.fetchGeofenceConfig(); }
+             else if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); }
+             else if (action === 'bypass_redirect' && this.bypassUrl) { window.open(this.bypassUrl, '_self'); } 
+             else { this.continueAppFlow(); }
+             return;
+        }
+        
+        // 1. ตรวจสอบเงื่อนไขซ่อนปุ่มปิด (D=1)
+        if (this.announcementControl.hideCloseBtn) {
+            this.closeAnnouncementButton.style.display = 'none';
+            this.countdownText.style.display = 'none';
+            
+        } else if (this.announcementControl.countdownSec > 0) {
+            // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
+            let remaining = this.announcementControl.countdownSec;
+            this.countdownText.textContent = remaining;
+            this.countdownText.style.display = 'flex';
+            this.closeAnnouncementButton.style.display = 'none'; // ซ่อนกากบาทระหว่างนับ
+
+            this.countdownInterval = setInterval(() => {
+                remaining--;
+                this.countdownText.textContent = remaining;
+
+                if (remaining <= 0) {
+                    clearInterval(this.countdownInterval);
+                    this.countdownInterval = null;
+                    this.countdownText.style.display = 'none';
+                    this.closeAnnouncementButton.style.display = 'flex'; // แสดงกากบาทเมื่อนับเสร็จ
+                }
+            }, 1000);
+            
+        } else {
+            // 3. เงื่อนไขปกติ (ไม่มี D/E)
+            this.closeAnnouncementButton.style.display = 'flex'; 
+            this.countdownText.style.display = 'none';
+        }
+    }
+
 
     closeAnnouncementModal() {
         this.announcementModalOverlay.classList.remove('show', 'initial-show');
         
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
         
+        // NEW: เคลียร์ Interval
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+        this.isAnnouncementActive = false;
+        
         const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
         
         setTimeout(() => {
             this.announcementModalOverlay.style.display = 'none';
+            this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
             
             if (postAction === 'bypass_redirect' && this.bypassUrl) {
                 // ใช้ _self เพื่อให้ redirect ในหน้าต่างเดิม (ตาม Flow การใช้งาน)
@@ -317,7 +421,8 @@ class GeofenceApp {
             return;
         }
 
-        // แสดง Geofence Checker ก่อนเรียก API
+        // NEW: กำหนดค่าควบคุมประกาศเริ่มต้นเป็น 0 ก่อนเรียก API เพื่อล้างค่าเก่า
+        this.announcementControl = { hideCloseBtn: false, countdownSec: 0 }; 
         this.showGeofenceChecker(); 
 
         this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
@@ -335,13 +440,19 @@ class GeofenceApp {
             const result = await response.json();
             
             if (result.success) {
+                // NEW: รับค่า Announcement Control
+                if (result.announcementControl) {
+                    this.announcementControl = result.announcementControl;
+                }
+                
                 if (result.needsCheck === false) {
                     // โหมด Bypass: ซ่อน Geofence Checker และ Redirect ทันที
                     this.geofenceChecker.style.display = 'none'; 
                     this.isBypassMode = true; 
                     this.bypassUrl = result.formUrl;
                     
-                    window.open(this.bypassUrl, '_self'); 
+                    // NEW: ก่อน Redirect ให้แสดง Announcement (ถ้ามี)
+                    this.loadAnnouncement('bypass_redirect', false, this.announcementControl); 
                     return;
                 }
                 
@@ -391,7 +502,8 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
-                 window.open(this.target.url, '_self');
+                 // NEW: ใช้ loadAnnouncement สำหรับ Geofence Success
+                 this.loadAnnouncement('bypass_redirect', false, this.announcementControl);
             }, 1000);
 
         } else {
