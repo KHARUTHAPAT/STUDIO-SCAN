@@ -73,9 +73,9 @@ class GeofenceApp {
             
             // Action หลังปิดประกาศ: 'main_menu' (เพื่อไป showMainMenu)
             const initialAction = 'main_menu';
+            // NEW: กำหนดให้เป็นค่าควบคุมปกติ (แสดงปุ่มกากบาททันที)
             const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
             
-            // NEW: ใน Admin Mode, Modal จะแสดงก่อน จากนั้นจะไปที่ Menu
             this.loadAnnouncement(initialAction, true, initialControl); 
         }
     }
@@ -284,7 +284,7 @@ class GeofenceApp {
         }
         
         this.isAnnouncementActive = true; 
-        // *** แก้ไข: ซ่อนปุ่มปิด/ตัวนับทั้งหมดไว้ตั้งแต่แรก เพื่อป้องกันการกดก่อน Logic รัน ***
+        // *** NEW: ซ่อนปุ่มทั้งหมดไว้ตั้งแต่แรก เพื่อรอ Logic ใน startCloseButtonControl ***
         this.closeAnnouncementButton.style.display = 'none'; 
         this.countdownText.style.display = 'none'; 
         this.closeIcon.style.display = 'none';
@@ -409,8 +409,8 @@ class GeofenceApp {
             
             // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
             this.closeAnnouncementButton.style.display = 'flex'; 
-            this.closeIcon.style.display = 'none'; 
-            this.countdownText.style.display = 'block'; 
+            this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
+            this.countdownText.style.display = 'block'; // แสดงตัวนับ
 
             this.countdownInterval = setInterval(() => {
                 this.countdownText.textContent = remaining; // แสดงตัวเลขปัจจุบัน
@@ -426,7 +426,7 @@ class GeofenceApp {
             }, 1000);
             
         } else {
-            // 3. เงื่อนไขปกติ (ไม่มี D/E)
+            // 3. เงื่อนไขปกติ (ไม่มี D/E หรือ D=0, E=0)
             this.closeAnnouncementButton.style.display = 'flex'; 
             this.closeIcon.style.display = 'block';
             this.countdownText.style.display = 'none';
