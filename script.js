@@ -160,8 +160,7 @@ class GeofenceApp {
         } else {
             this.announcementControl = { hideCloseBtn: false, countdownSec: 0 }; 
             if (action === 'geofence_check') {
-                // *** FIX: หากดึงข้อมูล Studio ไม่ได้ ให้ Child Page Redirect ตัวเองกลับไปหน้า Admin ***
-                alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ (กรุณาตรวจสอบชื่อ Studio และสิทธิ์ Apps Script)");
+                alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
                 window.location.href = window.location.origin + window.location.pathname; 
                 return;
             }
@@ -177,15 +176,10 @@ class GeofenceApp {
         this.loadAnnouncement(action, true, this.announcementControl); 
     }
     
-    // *** FIXED: เปลี่ยน continueAppFlow() ให้เรียก showMainMenu() ถ้าไม่มี studioName ***
     continueAppFlow() {
         this.isBypassMode = false;
         this.bypassUrl = null;
-        if (!this.studioName) { // เฉพาะหน้า Admin เท่านั้นที่ควรแสดง Main Menu
-             this.showMainMenu();
-        }
-        // ถ้ามี studioName (Child Page) แต่ถูกเรียก continueAppFlow() จะไม่เกิดอะไรขึ้น (หน้าจอยังเป็นประกาศ)
-        // แต่ใน Flow ปกติ จะไม่ถูกเรียกจาก Child Page แล้ว
+        this.showMainMenu();
     }
     
     // --- UI/Mode Handlers ---
@@ -491,12 +485,6 @@ class GeofenceApp {
     // แก้ไข: เพิ่ม isPreload flag และเปลี่ยนให้ return result แทนการเรียกฟังก์ชันอื่น
     async fetchGeofenceConfig(isPreload = false) {
         if (!this.studioName) {
-            // *** FIXED: ถ้าไม่มี studioName ให้ Child Page ปิดตัวเอง หรือ Redirect กลับไป Admin Page ***
-            if (isPreload) {
-                // ถ้าเป็น Child Page ที่พยายาม Preload แต่ไม่มีชื่อ Studio ให้ปิดตัวเอง
-                window.close();
-                return null;
-            }
             this.continueAppFlow(); 
             return null;
         }
@@ -553,7 +541,7 @@ class GeofenceApp {
                 }
                 // *** FIXED: หากโหลด Config ล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
                 if (this.studioName) {
-                    alert("ไม่สามารถโหลดข้อมูล Studio ได้ (เกิดข้อผิดพลาดในการดึง config) Child Page จะปิดตัวลง");
+                    // *** FIX: ใช้ window.location.href = ... เพื่อให้ Child Page ปิด Flow ตัวเอง และกลับไปหน้า Admin Page
                     window.location.href = window.location.origin + window.location.pathname; 
                 }
                 return null;
@@ -564,7 +552,6 @@ class GeofenceApp {
             }
             // *** FIXED: หากเชื่อมต่อล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
             if (this.studioName) {
-                alert("การเชื่อมต่อ Apps Script ล้มเหลว Child Page จะปิดตัวลง");
                 window.location.href = window.location.origin + window.location.pathname; 
             }
             return null;
@@ -601,8 +588,8 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
-                 // ประกาศรอบที่ 2 (Geofence Success) -> Redirect
-                 this.loadAnnouncement('bypass_redirect', false, this.announcementControl);
+                 // *** FIXED: Redirect ไป URL ปลายทางทันที (ลบการเรียก Modal ซ้ำ) ***
+                 window.open(this.target.url, '_self'); 
             }, 1000);
 
         } else {
