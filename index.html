@@ -144,7 +144,7 @@
             position: fixed; 
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.8); /* สีพื้นหลังเข้มขึ้นระหว่างนับ */
+            background: rgba(0, 0, 0, 0.35); /* NEW: ปรับให้จางลง (0.8 -> 0.35) */
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
             z-index: 1010; 
@@ -166,18 +166,14 @@
         /* สไตล์สำหรับตัวเลขที่ซ่อนกากบาทอยู่ */
         #countdownText {
             font-size: 1.2rem; /* ขนาดเล็กลงให้พอดีปุ่ม */
-            font-weight: 700;
-            color: #3b82f6; /* สีน้ำเงินสว่าง */
+            font-weight: 400; /* NEW: ตัวบาง */
+            color: #ffffff; /* NEW: สีขาวปกติ */
             display: none;
         }
         
-        /* ซ่อนกากบาทเมื่อตัวนับแสดง */
-        #closeAnnouncementButton .close-icon.hide {
-            display: none;
-        }
-        /* แสดงกากบาทเมื่อตัวนับถูกซ่อน */
-        #closeAnnouncementButton .close-icon:not(.hide) {
-            display: block;
+        /* สไตล์สำหรับกากบาท */
+        .close-icon {
+            display: block; /* ซ่อนด้วย JS แทน */
         }
 
 
@@ -252,9 +248,6 @@
         #announcementActionButton .button-bg {
              border-radius: 0 0 20px 20px !important;
         }
-        /* ลบสไตล์ #countdownText เดิม */
-
-
     </style>
 </head>
 <body class="light-mode">
