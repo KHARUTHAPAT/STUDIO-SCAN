@@ -139,11 +139,12 @@
              transform: translateY(0);
              opacity: 1;
         }
+        /* *** แก้ไข: ปรับสไตล์ของปุ่มปิดสำหรับ Countdown *** */
         .modal-close-button {
             position: fixed; 
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.5); 
+            background: rgba(0, 0, 0, 0.8); /* สีพื้นหลังเข้มขึ้นระหว่างนับ */
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
             z-index: 1010; 
@@ -161,6 +162,25 @@
             background: #fff;
             color: #000;
         }
+        
+        /* สไตล์สำหรับตัวเลขที่ซ่อนกากบาทอยู่ */
+        #countdownText {
+            font-size: 1.2rem; /* ขนาดเล็กลงให้พอดีปุ่ม */
+            font-weight: 700;
+            color: #3b82f6; /* สีน้ำเงินสว่าง */
+            display: none;
+        }
+        
+        /* ซ่อนกากบาทเมื่อตัวนับแสดง */
+        #closeAnnouncementButton .close-icon.hide {
+            display: none;
+        }
+        /* แสดงกากบาทเมื่อตัวนับถูกซ่อน */
+        #closeAnnouncementButton .close-icon:not(.hide) {
+            display: block;
+        }
+
+
         .modal-body {
             padding: 0; 
             line-height: 0; 
@@ -232,24 +252,8 @@
         #announcementActionButton .button-bg {
              border-radius: 0 0 20px 20px !important;
         }
-        /* NEW: สไตล์สำหรับ Countdown Text */
-        #countdownText {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            right: 0; 
-            bottom: 0; 
-            background: rgba(0, 0, 0, 0.7); 
-            color: #3b82f6; 
-            font-size: 4rem; 
-            font-weight: 700;
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            z-index: 2; 
-            border-radius: 20px; 
-            pointer-events: none; /* เพื่อให้คลิกผ่านไปยังรูปด้านหลังได้หากมี */
-        }
+        /* ลบสไตล์ #countdownText เดิม */
+
 
     </style>
 </head>
@@ -302,7 +306,8 @@
         <div class="login-card neural-modal-content">
             <div class="ai-glow"></div>
             <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
-                &times;
+                <span id="countdownText"></span>
+                <span class="close-icon">&times;</span> 
             </button>
             <div class="login-header" style="margin-bottom: 10px; text-align: center;">
             </div>
@@ -316,9 +321,7 @@
             <div class="modal-body">
                 <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
                 
-                <div id="countdownText" style="display: none;">
-                    </div>
-                </div>
+            </div>
             
             <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
                 <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
