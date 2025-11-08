@@ -161,7 +161,7 @@ class GeofenceApp {
             this.announcementControl = { hideCloseBtn: false, countdownSec: 0 }; 
             if (action === 'geofence_check') {
                 // *** FIX: หากดึงข้อมูล Studio ไม่ได้ ให้ Child Page Redirect ตัวเองกลับไปหน้า Admin ***
-                alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
+                alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ (กรุณาตรวจสอบชื่อ Studio และสิทธิ์ Apps Script)");
                 window.location.href = window.location.origin + window.location.pathname; 
                 return;
             }
@@ -491,6 +491,12 @@ class GeofenceApp {
     // แก้ไข: เพิ่ม isPreload flag และเปลี่ยนให้ return result แทนการเรียกฟังก์ชันอื่น
     async fetchGeofenceConfig(isPreload = false) {
         if (!this.studioName) {
+            // *** FIXED: ถ้าไม่มี studioName ให้ Child Page ปิดตัวเอง หรือ Redirect กลับไป Admin Page ***
+            if (isPreload) {
+                // ถ้าเป็น Child Page ที่พยายาม Preload แต่ไม่มีชื่อ Studio ให้ปิดตัวเอง
+                window.close();
+                return null;
+            }
             this.continueAppFlow(); 
             return null;
         }
@@ -545,11 +551,21 @@ class GeofenceApp {
                 if (!isPreload) {
                    this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
                 }
+                // *** FIXED: หากโหลด Config ล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
+                if (this.studioName) {
+                    alert("ไม่สามารถโหลดข้อมูล Studio ได้ (เกิดข้อผิดพลาดในการดึง config) Child Page จะปิดตัวลง");
+                    window.location.href = window.location.origin + window.location.pathname; 
+                }
                 return null;
             }
         } catch (error) {
             if (!isPreload) {
                 this.updateStatus('error', 'การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อกับ Web App ได้');
+            }
+            // *** FIXED: หากเชื่อมต่อล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
+            if (this.studioName) {
+                alert("การเชื่อมต่อ Apps Script ล้มเหลว Child Page จะปิดตัวลง");
+                window.location.href = window.location.origin + window.location.pathname; 
             }
             return null;
         }
