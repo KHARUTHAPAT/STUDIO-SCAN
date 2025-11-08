@@ -47,9 +47,10 @@ class GeofenceApp {
         this.isAnnouncementActive = false; // NEW: สถานะ Modal ปัจจุบัน
         this.countdownInterval = null; // NEW: ตัวแปรเก็บ Interval สำหรับนับถอยหลัง
 
+        // *** FIXED: ซ่อนทุกอย่างที่เกี่ยวกับหน้าหลักไว้ตั้งแต่เริ่มต้น ***
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
-        this.mainContainerWrapper.style.display = 'none';
+        this.mainContainerWrapper.style.display = 'none'; 
         
         this.pageTitle.textContent = 'ประกาศ'; 
         
