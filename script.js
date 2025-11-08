@@ -18,7 +18,7 @@ class GeofenceApp {
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
         this.modalLoader = document.getElementById('modalLoader'); 
         
-        // NEW: Announcement Button Elements
+        // Announcement Button Elements
         this.announcementActionArea = document.getElementById('announcementActionArea');
         this.announcementActionButton = document.getElementById('announcementActionButton');
 
@@ -143,7 +143,7 @@ class GeofenceApp {
         });
     }
 
-    // --- Announcement Logic (พร้อม Timeout + ซ่อนปุ่ม/หน่วงเวลา) ---
+    // --- Announcement Logic (แสดงเต็มก่อนเสมอ + hideClose/countdown) ---
     async loadAnnouncement(action, isInitialLoad = false) {
         if (!this.announcementModalOverlay) {
             if (action === 'studio_check') return this.fetchGeofenceConfig();
@@ -158,12 +158,12 @@ class GeofenceApp {
         }
 
         this.announcementImage.style.display = 'none';
-        this.announcementActionArea.style.display = 'none'; 
+        this.announcementActionArea.style.display = 'none';
         this.announcementModalOverlay.setAttribute('data-post-action', action);
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
 
         if (!isInitialLoad) {
-            this.announcementModalOverlay.style.display = 'flex'; 
+            this.announcementModalOverlay.style.display = 'flex';
             this.modalLoader.style.display = 'flex';
             setTimeout(() => this.announcementModalOverlay.classList.add('show'), 50);
         } else {
@@ -172,32 +172,33 @@ class GeofenceApp {
         }
 
         try {
+            // 1️⃣ ดึงข้อมูล geofence (เก็บไว้เฉย ๆ ยังไม่รัน)
             const formData = new FormData();
             formData.append('action', 'get_geofence_config');
             formData.append('studio', this.studioName || '');
-
             const response = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData });
             const result = await response.json();
 
-            // ตรวจการซ่อนปุ่มกากบาท
+            // เก็บผลไว้ใช้ภายหลังตอนปิดประกาศ
+            this.pendingAction = { type: 'geofence', data: result };
+
+            // ตั้งค่าปุ่มปิด
             if (result.hideClose) {
                 this.closeAnnouncementButton.style.display = 'none';
             } else {
                 this.closeAnnouncementButton.style.display = 'flex';
-                // ตรวจว่ามี countdown ไหม
                 if (result.countdown && !isNaN(result.countdown)) {
                     this.startCountdown(result.countdown);
                 }
             }
 
-            // โหลดประกาศตามปกติ
+            // 2️⃣ โหลดประกาศ (รูป / ปุ่ม)
             const formData2 = new FormData();
             formData2.append('action', 'get_announcement_image');
-            formData2.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
-
+            formData2.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL);
             const res2 = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData2 });
             const ann = await res2.json();
-            
+
             const hasImage = ann.success && ann.imageUrl;
             const hasButton = ann.success && ann.buttonText && ann.buttonUrl;
 
@@ -208,10 +209,49 @@ class GeofenceApp {
                 this.announcementActionButton.setAttribute('data-url', ann.buttonUrl.trim());
                 this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
             }
+
         } catch (error) {
             console.error('Error fetching announcement:', error);
             this.closeAnnouncementModal();
         }
+    }
+
+    // --- เมื่อปิดประกาศแล้วค่อยไปทำต่อ (เช่น ตรวจพิกัด) ---
+    closeAnnouncementModal() {
+        this.announcementModalOverlay.classList.remove('show', 'initial-show');
+        this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
+        const pending = this.pendingAction;
+
+        setTimeout(() => {
+            this.announcementModalOverlay.style.display = 'none';
+
+            if (pending && pending.type === 'geofence') {
+                const result = pending.data;
+
+                if (!result.success) {
+                    this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message);
+                    return;
+                }
+
+                if (result.needsCheck === false) {
+                    this.geofenceChecker.style.display = 'none';
+                    this.isBypassMode = true;
+                    this.bypassUrl = result.formUrl;
+                    window.open(this.bypassUrl, '_self');
+                } else {
+                    this.target = {
+                        lat: result.targetLat,
+                        lon: result.targetLon,
+                        dist: result.maxDist,
+                        url: result.formUrl
+                    };
+                    this.showGeofenceChecker();
+                    this.checkGeolocation();
+                }
+            } else {
+                this.continueAppFlow();
+            }
+        }, 300);
     }
 
     /** ฟังก์ชันหน่วงเวลาและนับถอยหลังบนปุ่มปิด */
@@ -227,19 +267,6 @@ class GeofenceApp {
                 btn.disabled = false;
             }
         }, 1000);
-    }
-
-    closeAnnouncementModal() {
-        this.announcementModalOverlay.classList.remove('show', 'initial-show');
-        this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
-        const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
-        setTimeout(() => {
-            this.announcementModalOverlay.style.display = 'none';
-            if (postAction === 'bypass_redirect' && this.bypassUrl) window.open(this.bypassUrl, '_self');
-            else if (postAction === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); }
-            else if (postAction === 'studio_check') this.fetchGeofenceConfig();
-            else this.continueAppFlow();
-        }, 300);
     }
 
     // --- Geofencing Logic ---
