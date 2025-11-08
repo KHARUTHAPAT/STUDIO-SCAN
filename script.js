@@ -52,14 +52,22 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.mainContainerWrapper.style.display = 'none'; 
         
-        this.pageTitle.textContent = 'ประกาศ'; // หน้าแรกและหน้าประกาศใช้ชื่อ 'ประกาศ'
+        this.pageTitle.textContent = 'ประกาศ'; // ชื่อหน้า: แสดง "ประกาศ"
         
         // *** FIX: ซ่อนปุ่มกากบาทไว้ตั้งแต่แรก (ใช้ JS/CSS เพื่อแสดงผล) ***
         this.closeAnnouncementButton.style.display = 'none'; 
         
-        // บังคับใช้ Light Mode ตั้งแต่เริ่มต้น
-        document.body.classList.add('light-mode');
-        document.body.classList.remove('dark-mode'); 
+        // *** NEW FIX: หากเป็น Child Page (มี studioName) ให้บังคับ Body เป็นพื้นหลังมืดทันทีเพื่อป้องกัน White Flash ***
+        if (this.studioName) {
+            document.body.style.backgroundColor = '#0a0a0f'; // ใช้สีเดียวกับ Dark Mode background (ดำ)
+            document.body.classList.remove('light-mode');
+            document.body.classList.add('dark-mode'); 
+        } else {
+             // สำหรับหน้าเมนูหลัก ให้ใช้ Light Mode (White background)
+             document.body.classList.add('light-mode');
+             document.body.classList.remove('dark-mode'); 
+        }
+        // -----------------------------------------------------------
 
         // *** แก้ไข: เพิ่มการจัดการ body overflow สำหรับ Menu/Checker ***
         document.body.style.overflow = 'hidden'; 
@@ -183,6 +191,12 @@ class GeofenceApp {
     // --- UI/Mode Handlers ---
 
     showMainMenu() {
+        // *** แก้ไข: บังคับให้เป็น Light Mode เมื่อเข้าสู่หน้าเมนูหลัก ***
+        document.body.classList.add('light-mode'); 
+        document.body.classList.remove('dark-mode'); 
+        document.body.style.backgroundColor = '#f8fafc'; 
+        // -----------------------------------------------------------
+        
         this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
@@ -205,6 +219,13 @@ class GeofenceApp {
     }
 
     showGeofenceChecker() {
+        // *** แก้ไข: บังคับให้เป็น Light Mode/Dark Mode เมื่อเข้าสู่หน้า Geofence Checker ***
+        // (ตาม default คือ Light Mode ตามคำขอผู้ใช้ในอดีต)
+        document.body.classList.add('light-mode'); 
+        document.body.classList.remove('dark-mode'); 
+        document.body.style.backgroundColor = '#f8fafc'; 
+        // -----------------------------------------------------------
+        
         this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
@@ -216,10 +237,6 @@ class GeofenceApp {
         this.mainMenuCard.style.marginTop = '';
         document.getElementById('mainContainerWrapper').style.marginTop = '';
         // ----------------------------------------------------------------------------
-        
-        // *** แก้ไข: บังคับใช้ Light Mode สำหรับหน้าตรวจสอบพิกัด (ตามคำขอ) ***
-        document.body.classList.add('light-mode'); 
-        document.body.classList.remove('dark-mode'); 
     }
     
     async fetchStudioNamesAndSetupMenu() {
@@ -480,6 +497,7 @@ class GeofenceApp {
         }
         
         if (!isPreload) {
+             // *** FIX: เมื่อเข้าหน้า Geofence Checker ให้กลับไปใช้ Light Mode ***
              this.showGeofenceChecker(); 
              this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
         }
@@ -615,7 +633,7 @@ class GeofenceApp {
         this.statusMessage.textContent = message;
         
         if (type === 'loading') {
-            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle></svg>';
+            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;\"></circle></svg>';
             this.retryButton.style.display = 'none';
         } else if (type === 'error') {
             this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
