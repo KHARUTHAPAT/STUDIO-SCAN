@@ -441,8 +441,8 @@ class GeofenceApp {
             if (postAction === 'bypass_redirect' && this.bypassUrl) {
                 // Flow: ประกาศ -> Redirect
                 window.open(this.bypassUrl, '_self'); 
-            } else if (postAction === 'geofence_check') {
-                // Flow: ประกาศ -> ตรวจสอบพิกัด
+            } else if (postAction === 'studio_check') {
+                // Flow: ประกาศ -> ตรวจสอบพิกัด (เมื่อเข้า Studio ครั้งแรก/รีเฟรช)
                 this.showGeofenceChecker();
                 this.checkGeolocation();
             } else if (postAction === 'main_menu') {
