@@ -50,23 +50,17 @@ class GeofenceApp {
         // *** FIXED: ซ่อนทุกอย่างที่เกี่ยวกับหน้าหลักไว้ตั้งแต่เริ่มต้น ***
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
-        this.mainContainerWrapper.style.display = 'none'; 
+        // mainContainerWrapper ถูกซ่อนด้วย CSS Inline style ใน index.html
         
         this.pageTitle.textContent = 'ประกาศ'; // ชื่อหน้า: แสดง "ประกาศ"
         
         // *** FIX: ซ่อนปุ่มกากบาทไว้ตั้งแต่แรก (ใช้ JS/CSS เพื่อแสดงผล) ***
         this.closeAnnouncementButton.style.display = 'none'; 
         
-        // *** NEW FIX: หากเป็น Child Page (มี studioName) ให้บังคับ Body เป็นพื้นหลังมืดทันทีเพื่อป้องกัน White Flash ***
-        if (this.studioName) {
-            document.body.style.backgroundColor = '#0a0a0f'; // ใช้สีเดียวกับ Dark Mode background (ดำ)
-            document.body.classList.remove('light-mode');
-            document.body.classList.add('dark-mode'); 
-        } else {
-             // สำหรับหน้าเมนูหลัก ให้ใช้ Light Mode (White background)
-             document.body.classList.add('light-mode');
-             document.body.classList.remove('dark-mode'); 
-        }
+        // *** NEW FIX: หากเป็น Child Page (มี studioName) ให้ Body เป็น Light Mode (พื้นหลังขาว) เพื่อให้ Modal Overlay จางๆ ทับพื้นหลังขาว ***
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode'); 
+        document.body.style.backgroundColor = '#f8fafc'; 
         // -----------------------------------------------------------
 
         // *** แก้ไข: เพิ่มการจัดการ body overflow สำหรับ Menu/Checker ***
