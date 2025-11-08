@@ -75,6 +75,7 @@ class GeofenceApp {
             const initialAction = 'main_menu';
             const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
             
+            // NEW: ใน Admin Mode, Modal จะแสดงก่อน จากนั้นจะไปที่ Menu
             this.loadAnnouncement(initialAction, true, initialControl); 
         }
     }
@@ -283,9 +284,11 @@ class GeofenceApp {
         }
         
         this.isAnnouncementActive = true; 
-        this.closeAnnouncementButton.style.display = 'none'; // ซ่อนปุ่มปิด/ตัวนับทั้งหมดก่อน
+        // *** แก้ไข: ซ่อนปุ่มปิด/ตัวนับทั้งหมดไว้ตั้งแต่แรก เพื่อป้องกันการกดก่อน Logic รัน ***
+        this.closeAnnouncementButton.style.display = 'none'; 
         this.countdownText.style.display = 'none'; 
         this.closeIcon.style.display = 'none';
+        // --------------------------------------------------------------------------
 
         // เคลียร์ Interval เก่าก่อนเริ่ม
         if (this.countdownInterval) {
@@ -404,9 +407,10 @@ class GeofenceApp {
             // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
             let remaining = this.announcementControl.countdownSec;
             
-            this.closeAnnouncementButton.style.display = 'flex'; // แสดงปุ่มปิด
-            this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
-            this.countdownText.style.display = 'block'; // แสดงตัวนับ
+            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
+            this.closeAnnouncementButton.style.display = 'flex'; 
+            this.closeIcon.style.display = 'none'; 
+            this.countdownText.style.display = 'block'; 
 
             this.countdownInterval = setInterval(() => {
                 this.countdownText.textContent = remaining; // แสดงตัวเลขปัจจุบัน
@@ -453,7 +457,6 @@ class GeofenceApp {
                 window.open(this.bypassUrl, '_self'); 
             } else if (postAction === 'geofence_check') {
                 // Flow 2: ประกาศ -> ตรวจสอบพิกัด (เมื่อเข้า Studio ครั้งแรก/รีเฟรช)
-                // NEW: บังคับให้ไป Show Geofence Checker และเริ่มตรวจสอบทันที
                 this.showGeofenceChecker();
                 this.checkGeolocation();
             } else if (postAction === 'main_menu') {
