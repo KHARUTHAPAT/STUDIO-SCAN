@@ -47,10 +47,9 @@ class GeofenceApp {
         this.isAnnouncementActive = false; // NEW: สถานะ Modal ปัจจุบัน
         this.countdownInterval = null; // NEW: ตัวแปรเก็บ Interval สำหรับนับถอยหลัง
 
-        // *** FIX: บังคับให้ซ่อนองค์ประกอบของหน้าหลักทั้งหมดตั้งแต่แรก ***
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
-        this.mainContainerWrapper.style.display = 'none';
+        this.mainContainerWrapper.style.display = 'none'; // **FIXED: ซ่อน Container หลัก**
         
         this.pageTitle.textContent = 'ประกาศ'; 
         
@@ -106,7 +105,7 @@ class GeofenceApp {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
              
-             // NEW: ลบ .initial-show ออกที่นี่ 
+             // NEW: ลบ .initial-show ออกที่นี่ (เพื่อให้ปุ่มถูกซ่อนก่อน)
              this.announcementModalOverlay.classList.remove('initial-show');
              
              // เรียกฟังก์ชันควบคุมปุ่มปิด
