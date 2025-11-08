@@ -21,10 +21,13 @@ class GeofenceApp {
         // NEW: Announcement Button Elements
         this.announcementActionArea = document.getElementById('announcementActionArea');
         this.announcementActionButton = document.getElementById('announcementActionButton');
+        
+        // NEW: Timer สำหรับการหน่วงเวลาปุ่มปิด
+        this.closeButtonTimer = null; 
 
         // Configuration 
         // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyBz6JISCmdhxPlcUp3MVRT-TvZlYFZzbkk6eg5iQss5tASfjYy13JRODKZYPgEb7LS/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwUGhhr8YxR4TeMrlBPXE2OoNY_Yx2Du1mO2Z9eqsCozIWX6c1hPriWOZ4C7LyAOzxr/exec'; // *** URL ที่ถูกอัปเดตใหม่ ***
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -207,6 +210,13 @@ class GeofenceApp {
              return;
         }
         
+        // *** NEW: เคลียร์ Timer เก่าก่อนเสมอ ***
+        if (this.closeButtonTimer) {
+             clearTimeout(this.closeButtonTimer);
+             this.closeButtonTimer = null;
+        }
+        // **********************************
+        
         if (!isInitialLoad) {
             this.announcementModalOverlay.classList.remove('show', 'initial-show');
             this.announcementModalOverlay.style.display = 'none';
@@ -214,6 +224,10 @@ class GeofenceApp {
         
         this.announcementImage.style.display = 'none';
         this.announcementActionArea.style.display = 'none'; 
+        
+        // *** NEW: ตรวจสอบและซ่อนปุ่มปิดทันทีหากถูกกำหนดไว้ในครั้งก่อนหน้า (Reset เป็นแสดงไว้ก่อน) ***
+        this.closeAnnouncementButton.style.display = 'flex'; 
+        // **********************************
 
         this.announcementModalOverlay.setAttribute('data-post-action', action);
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
@@ -244,8 +258,29 @@ class GeofenceApp {
             
             const hasImage = result.success && result.imageUrl && result.imageUrl.trim() !== '';
             const hasButton = result.success && result.buttonText && result.buttonUrl; 
+            
+            // *** NEW: ค่า Config สำหรับปุ่มปิด (จาก Code.gs) ***
+            const hideCloseButton = result.success && result.hideCloseButton === true;
+            const closeDelaySeconds = result.success ? (parseFloat(result.closeDelaySeconds) || 0) : 0;
+            // ***************************************************
 
-            if (hasImage || hasButton) {
+            if (hasImage || hasButton || hideCloseButton) { 
+                
+                // *** NEW: จัดการการซ่อน/หน่วงเวลาปุ่มปิด ***
+                if (hideCloseButton) {
+                    this.closeAnnouncementButton.style.display = 'none'; // ซ่อนทันที
+                    
+                    if (closeDelaySeconds > 0) {
+                         // หน่วงเวลาการแสดงปุ่มปิด
+                         this.closeButtonTimer = setTimeout(() => {
+                             this.closeAnnouncementButton.style.display = 'flex'; // แสดงปุ่มปิด
+                             this.closeButtonTimer = null;
+                         }, closeDelaySeconds * 1000); 
+                    }
+                } else {
+                    this.closeAnnouncementButton.style.display = 'flex'; // แสดงปกติ (Default)
+                }
+                // *****************************************
                 
                 if (hasImage) {
                     this.announcementImage.src = result.imageUrl.trim(); 
@@ -285,6 +320,13 @@ class GeofenceApp {
     }
 
     closeAnnouncementModal() {
+        // *** NEW: เคลียร์ Timer ก่อนปิด Modal ***
+        if (this.closeButtonTimer) {
+             clearTimeout(this.closeButtonTimer);
+             this.closeButtonTimer = null;
+        }
+        // **********************************
+        
         this.announcementModalOverlay.classList.remove('show', 'initial-show');
         
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
