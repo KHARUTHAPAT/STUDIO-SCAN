@@ -18,29 +18,12 @@ class GeofenceApp {
         this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
         this.modalLoader = document.getElementById('modalLoader'); 
         
-        // NEW: สร้างองค์ประกอบสำหรับแสดงตัวนับถอยหลัง
-        this.closeButtonCounter = document.createElement('span'); 
-        this.closeButtonCounter.id = 'closeButtonCounter';
-        
-        if (this.closeAnnouncementButton) {
-             // เพิ่มตัวนับถอยหลังเข้าไปในปุ่มปิด
-            this.closeAnnouncementButton.innerHTML = '&times;'; // ให้มีแค่สัญลักษณ์ x
-            this.closeAnnouncementButton.appendChild(this.closeButtonCounter);
-        }
-        this.closeButtonCounter.style.display = 'none';
-        this.closeButtonCounter.style.marginLeft = '5px';
-        
         // NEW: Announcement Button Elements
         this.announcementActionArea = document.getElementById('announcementActionArea');
         this.announcementActionButton = document.getElementById('announcementActionButton');
-        
-        // NEW: Timer และ Interval สำหรับการหน่วงเวลา/นับถอยหลัง
-        this.closeButtonTimer = null; 
-        this.countdownInterval = null; 
 
         // Configuration 
-        // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzv9dSZIsLsdqPzFMKHoUCZi3a5dSLHltJ-5bt0srWBGjXZzEAZzO_hUYx1KvQek3Wo/exec'; // *** URL ที่ถูกอัปเดตใหม่ ***
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz8wbTBS0cBTPNCqbY6Vyi1Zwdl8JPqUQPwSvbwmK4GCjH2wWx2g-p7yzj1s8mAheFz/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -48,7 +31,6 @@ class GeofenceApp {
         this.studioName = this.params.get('studio');
         
         this.target = { lat: null, lon: null, dist: null, url: null };
-        this.studioConfig = null; // เก็บ config ของ Studio ที่ถูกเลือกไว้
 
         this.isBypassMode = false;
         this.bypassUrl = null; 
@@ -57,10 +39,8 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.pageTitle.textContent = 'ประกาศ'; 
 
-        // บังคับใช้ Light Mode ตั้งแต่เริ่มต้น
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
-
         document.body.style.overflow = 'hidden'; 
 
         this.init();
@@ -68,39 +48,29 @@ class GeofenceApp {
 
     init() {
         this.bindEvents();
-        
-        // NEW: ถ้ามี studioName ให้โหลด config ก่อน (action 'load_config') 
-        // ถ้าไม่มี ให้โหลด Modal ประกาศทั่วไป (action 'main_menu')
-        const initialAction = this.studioName ? 'load_config' : 'main_menu';
-        
-        // โหลด Modal ประกาศเริ่มต้น
+        const initialAction = this.studioName ? 'studio_check' : 'main_menu';
         this.loadAnnouncement(initialAction, true); 
     }
     
     _onAnnouncementButtonClick = (event) => {
         const url = event.currentTarget.getAttribute('data-url');
-        if (url) {
-            window.open(url, '_blank');
-        }
+        if (url) window.open(url, '_blank');
     }
 
     bindEvents() {
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
-        
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
-        
         this.announcementImage.addEventListener('load', () => { 
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
              this.announcementModalOverlay.classList.remove('initial-show');
         });
-
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
              this.announcementModalOverlay.classList.remove('initial-show');
-             if (this.announcementActionArea.style.display === 'none' && this.closeAnnouncementButton.style.display !== 'none' && this.closeButtonTimer === null) {
+             if (this.announcementActionArea.style.display === 'none') {
                  this.closeAnnouncementModal(); 
              }
              this.announcementImage.style.display = 'none'; 
@@ -108,32 +78,24 @@ class GeofenceApp {
         });
     }
     
-    // --- App Flow Control ---
-
     continueAppFlow() {
         this.isBypassMode = false;
         this.bypassUrl = null;
         this.showMainMenu();
     }
     
-    // --- UI/Mode Handlers ---
     showMainMenu() {
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
-        
         document.body.style.overflow = 'auto'; 
         document.body.classList.add('menu-scrollable');
-        
         this.mainMenuCard.style.marginTop = '0';
         document.getElementById('mainContainerWrapper').style.marginTop = '0';
-        
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
-        
         this.pageTitle.textContent = 'เมนู Studio';
         document.getElementById('menuTitle').textContent = 'เมนู Studio'; 
         document.getElementById('mainMenuCard').querySelector('p').textContent = 'เลือก Studio ที่ต้องการเข้าถึง';
-
         this.fetchStudioNamesAndSetupMenu();
     }
 
@@ -141,12 +103,10 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
-
         document.body.style.overflow = 'hidden'; 
         document.body.classList.remove('menu-scrollable');
         this.mainMenuCard.style.marginTop = '';
         document.getElementById('mainContainerWrapper').style.marginTop = '';
-        
         document.body.classList.add('light-mode'); 
         document.body.classList.remove('dark-mode'); 
     }
@@ -156,387 +116,216 @@ class GeofenceApp {
             const formData = new FormData();
             formData.append('action', 'get_studio_list');
 
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData 
-            });
-            
+            const response = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData });
             const result = await response.json();
-            
-            if (result.success && result.studioNames && result.studioNames.length > 0) {
+            if (result.success && result.studioNames?.length > 0) {
                 this.setupMenuButtons(result.studioNames);
             } else {
-                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้ (โปรดตรวจสอบชีต \'Studio\' และสิทธิ์การเข้าถึง)</p>';
-                console.error("No studio names returned or failed to fetch.");
+                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align:center;">ไม่สามารถโหลดรายการ Studio ได้</p>';
             }
-
-        } catch (error) {
-            this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">การเชื่อมต่อ API ล้มเหลว</p>';
-            console.error("Failed to fetch studio list:", error);
+        } catch {
+            this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align:center;">การเชื่อมต่อ API ล้มเหลว</p>';
         }
     }
 
     setupMenuButtons(studioNames) {
         this.menuButtonsContainer.innerHTML = ''; 
-        
         studioNames.forEach(name => {
-            const newButton = document.createElement('button');
-            newButton.className = 'neural-button';
-            newButton.type = 'button';
-            newButton.style.marginTop = '0';
-            
-            newButton.innerHTML = `
-                <div class="button-bg"></div>
-                <span class="button-text">${name}</span> <div class="button-glow"></div>
-            `;
-
-            newButton.addEventListener('click', () => {
+            const btn = document.createElement('button');
+            btn.className = 'neural-button';
+            btn.type = 'button';
+            btn.innerHTML = `<div class="button-bg"></div><span class="button-text">${name}</span><div class="button-glow"></div>`;
+            btn.addEventListener('click', () => {
                 const url = `?studio=${encodeURIComponent(name)}`;
                 window.open(url, '_blank'); 
             });
-            
-            this.menuButtonsContainer.appendChild(newButton);
+            this.menuButtonsContainer.appendChild(btn);
         });
     }
-    
-    // NEW: ฟังก์ชันแสดงตัวนับถอยหลัง
-    startCountdown(duration) {
-        let remaining = Math.ceil(duration);
-        this.closeButtonCounter.textContent = `(${remaining})`;
-        this.closeButtonCounter.style.display = 'inline';
-        
-        this.countdownInterval = setInterval(() => {
-            remaining--;
-            if (remaining > 0) {
-                this.closeButtonCounter.textContent = `(${remaining})`;
-            } else {
-                this.stopCountdown();
-            }
-        }, 1000);
-    }
-    
-    stopCountdown() {
-        if (this.countdownInterval) {
-            clearInterval(this.countdownInterval);
-            this.countdownInterval = null;
-        }
-        this.closeButtonCounter.style.display = 'none';
-        this.closeButtonCounter.textContent = '';
-    }
 
-    // --- Announcement Logic (พร้อม Timeout) ---
+    // --- Announcement Logic (พร้อม Timeout + ซ่อนปุ่ม/หน่วงเวลา) ---
+    async loadAnnouncement(action, isInitialLoad = false) {
+        if (!this.announcementModalOverlay) {
+            if (action === 'studio_check') return this.fetchGeofenceConfig();
+            if (action === 'geofence_check') return (this.showGeofenceChecker(), this.checkGeolocation());
+            if (action === 'bypass_redirect' && this.bypassUrl) return window.open(this.bypassUrl, '_self');
+            return this.continueAppFlow();
+        }
 
-    // action: 'main_menu', 'load_config', 'check_geo', 'bypass_redirect'
-    // studioConfig: ใช้สำหรับตั้งค่าปุ่มปิดเฉพาะเมื่อมาจาก fetchGeofenceConfig (หลังเลือก Studio)
-    async loadAnnouncement(action, isInitialLoad = false, studioConfig = null) {
-        
-        // เคลียร์ Timer และ Interval เก่าก่อนเสมอ
-        this.stopCountdown();
-        if (this.closeButtonTimer) {
-             clearTimeout(this.closeButtonTimer);
-             this.closeButtonTimer = null;
-        }
-        
-        // ถ้า Modal ถูกปิดแล้ว และไม่ใช่การโหลดเริ่มต้น ให้ดำเนินการตาม action ทันที
-        if (!isInitialLoad && !this.announcementModalOverlay) { 
-             if (action === 'load_config') { this.fetchGeofenceConfig(true); }
-             else if (action === 'check_geo') { this.showGeofenceChecker(); this.checkGeolocation(); }
-             else if (action === 'bypass_redirect' && this.bypassUrl) { window.open(this.bypassUrl, '_self'); } 
-             else { this.continueAppFlow(); }
-             return;
-        }
-        
         if (!isInitialLoad) {
             this.announcementModalOverlay.classList.remove('show', 'initial-show');
             this.announcementModalOverlay.style.display = 'none';
         }
-        
+
         this.announcementImage.style.display = 'none';
         this.announcementActionArea.style.display = 'none'; 
-        
-        this.closeAnnouncementButton.style.display = 'flex'; 
-
         this.announcementModalOverlay.setAttribute('data-post-action', action);
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
-        
-        // แสดง Modal Loader และ Overlay ทันที
-        this.announcementModalOverlay.style.display = 'flex'; 
-        this.modalLoader.style.display = 'flex';
-        setTimeout(() => {
+
+        if (!isInitialLoad) {
+            this.announcementModalOverlay.style.display = 'flex'; 
+            this.modalLoader.style.display = 'flex';
+            setTimeout(() => this.announcementModalOverlay.classList.add('show'), 50);
+        } else {
+            this.modalLoader.style.display = 'flex';
             this.announcementModalOverlay.classList.add('show');
-        }, 50);
-
-        let result;
-        if (studioConfig) {
-             // ใช้ Config ที่ได้จากการเช็ค Studio 
-             result = { success: true, ...studioConfig };
-        } else {
-             // โหลด Config ทั่วไปจากชีต 'รวมข้อมูล'
-             try {
-                const formData = new FormData();
-                formData.append('action', 'get_announcement_image');
-                formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
-
-                const response = await fetch(this.WEB_APP_URL, {
-                    method: 'POST',
-                    body: formData 
-                });
-                result = await response.json();
-             } catch (error) {
-                 console.error('Error fetching announcement:', error);
-                 this.closeAnnouncementModal();
-                 return;
-             }
-        }
-            
-        if (!result.success && !studioConfig) {
-             this.closeAnnouncementModal(); 
-             return;
         }
 
-        const hasImage = result.imageUrl && result.imageUrl.trim() !== '';
-        const hasButton = result.buttonText && result.buttonUrl; 
-        
-        // ค่า Config สำหรับปุ่มปิด
-        const hideCloseButton = result.hideCloseButton === true;
-        const closeDelaySeconds = parseFloat(result.closeDelaySeconds) || 0;
-        
-        // *** จัดการการซ่อน/หน่วงเวลาปุ่มปิด (กากบาท) ***
-        if (hideCloseButton) {
-            this.closeAnnouncementButton.style.display = 'none'; // ซ่อนทันที
-            
-            if (closeDelaySeconds > 0) {
-                 this.startCountdown(closeDelaySeconds); // เริ่มนับถอยหลัง (แสดงตัวเลขเท่านั้น)
-                 // หน่วงเวลาการแสดงปุ่มปิด
-                 this.closeButtonTimer = setTimeout(() => {
-                     this.closeAnnouncementButton.style.display = 'flex'; // แสดงปุ่มปิด
-                     this.closeButtonTimer = null;
-                 }, closeDelaySeconds * 1000); 
+        try {
+            const formData = new FormData();
+            formData.append('action', 'get_geofence_config');
+            formData.append('studio', this.studioName || '');
+
+            const response = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData });
+            const result = await response.json();
+
+            // ตรวจการซ่อนปุ่มกากบาท
+            if (result.hideClose) {
+                this.closeAnnouncementButton.style.display = 'none';
+            } else {
+                this.closeAnnouncementButton.style.display = 'flex';
+                // ตรวจว่ามี countdown ไหม
+                if (result.countdown && !isNaN(result.countdown)) {
+                    this.startCountdown(result.countdown);
+                }
             }
-        } else {
-            this.closeAnnouncementButton.style.display = 'flex'; // แสดงปกติ (Default)
-        }
-        // *****************************************
 
-        // จัดการเนื้อหาอื่น ๆ
-        if (hasImage) {
-            this.announcementImage.src = result.imageUrl.trim(); 
-        } else {
-            this.modalLoader.style.display = 'none'; 
-            this.announcementModalOverlay.classList.remove('initial-show'); 
-        }
-        
-        if (hasButton) {
-            this.announcementActionArea.style.display = 'block';
-            this.announcementActionButton.style.display = 'flex';
-            this.announcementActionButton.querySelector('.button-text').textContent = result.buttonText.trim();
-            this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
-            this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
-        }
+            // โหลดประกาศตามปกติ
+            const formData2 = new FormData();
+            formData2.append('action', 'get_announcement_image');
+            formData2.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
 
-        // หากไม่มีภาพ/ปุ่ม และปุ่มปิดแสดงทันที (ไม่มี D=1 หรือ E>0) และไม่ใช่ initial load 
-        // ให้ปิด Modal ทันที เพื่อไปต่อ Flow ที่แท้จริง (check geo/bypass)
-        if (!hasImage && !hasButton && !hideCloseButton && !isInitialLoad) {
-             this.closeAnnouncementModal();
-             return;
-        }
+            const res2 = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData2 });
+            const ann = await res2.json();
+            
+            const hasImage = ann.success && ann.imageUrl;
+            const hasButton = ann.success && ann.buttonText && ann.buttonUrl;
 
-
-        const loadTimeout = setTimeout(() => {
-            const isImageLoading = hasImage && (this.modalLoader.style.display !== 'none' || this.announcementImage.style.display === 'none');
-            if (isImageLoading && !hasButton) {
-                console.warn("Announcement load timeout. Skipping image and continuing flow.");
-                this.announcementImage.src = ''; 
-                this.modalLoader.style.display = 'none';
-                if (this.closeAnnouncementButton.style.display !== 'none') {
-                    this.closeAnnouncementModal();
-                } 
-            } else if (isImageLoading && hasButton) {
-                this.announcementImage.src = '';
-                this.modalLoader.style.display = 'none';
+            if (hasImage) this.announcementImage.src = ann.imageUrl.trim();
+            if (hasButton) {
+                this.announcementActionArea.style.display = 'block';
+                this.announcementActionButton.querySelector('.button-text').textContent = ann.buttonText.trim();
+                this.announcementActionButton.setAttribute('data-url', ann.buttonUrl.trim());
+                this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
             }
-        }, 5000); 
+        } catch (error) {
+            console.error('Error fetching announcement:', error);
+            this.closeAnnouncementModal();
+        }
+    }
+
+    /** ฟังก์ชันหน่วงเวลาและนับถอยหลังบนปุ่มปิด */
+    startCountdown(seconds) {
+        const btn = this.closeAnnouncementButton;
+        let remaining = seconds;
+        btn.disabled = true;
+        const timer = setInterval(() => {
+            btn.textContent = remaining;
+            if (--remaining <= 0) {
+                clearInterval(timer);
+                btn.textContent = '×';
+                btn.disabled = false;
+            }
+        }, 1000);
     }
 
     closeAnnouncementModal() {
-        // เคลียร์ Timer และ Interval ก่อนปิด Modal
-        this.stopCountdown();
-        if (this.closeButtonTimer) {
-             clearTimeout(this.closeButtonTimer);
-             this.closeButtonTimer = null;
-        }
-        
         this.announcementModalOverlay.classList.remove('show', 'initial-show');
-        
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
-        
         const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
-        
         setTimeout(() => {
             this.announcementModalOverlay.style.display = 'none';
-            
-            // *** NEW FLOW CONTROL ***
-            if (postAction === 'bypass_redirect' && this.bypassUrl) {
-                window.open(this.bypassUrl, '_self'); 
-            } else if (postAction === 'check_geo') { 
-                // หน้าประกาศปิดแล้ว ไปหน้าตรวจสอบพิกัด
-                this.showGeofenceChecker();
-                this.checkGeolocation();
-            } else if (postAction === 'load_config') {
-                 // หลังปิดประกาศเริ่มต้น ให้ไปโหลด config ของ Studio ที่ถูกเลือก
-                 this.fetchGeofenceConfig(false); 
-            } else { 
-                this.continueAppFlow(); 
-            }
-            // ************************
-        }, 300); 
+            if (postAction === 'bypass_redirect' && this.bypassUrl) window.open(this.bypassUrl, '_self');
+            else if (postAction === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); }
+            else if (postAction === 'studio_check') this.fetchGeofenceConfig();
+            else this.continueAppFlow();
+        }, 300);
     }
 
     // --- Geofencing Logic ---
-
-    // forceModalDisplay: บอกว่าต้องข้ามการแสดง Modal ในรอบนี้ไปก่อนหรือไม่
-    async fetchGeofenceConfig(forceModalDisplay) {
-        if (!this.studioName) {
-            this.continueAppFlow(); 
-            return;
-        }
-
-        if (!forceModalDisplay) {
-             // ถ้ามาจาก closeAnnouncementModal (Modal เพิ่งปิด) ให้แสดง Loader/Checker ทันที
-             this.showGeofenceChecker(); 
-             this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงข้อมูล Studio');
-        } 
+    async fetchGeofenceConfig() {
+        if (!this.studioName) return this.continueAppFlow(); 
+        this.showGeofenceChecker(); 
+        this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
         
         const formData = new FormData();
         formData.append('action', 'get_geofence_config');
         formData.append('studio', this.studioName);
 
         try {
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData
-            });
-
+            const response = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData });
             const result = await response.json();
             
             if (result.success) {
-                // ดึงค่าควบคุมปุ่มปิดเฉพาะของ Studio นี้
-                const hideCloseButton = result.hideCloseButton;
-                const closeDelaySeconds = result.closeDelaySeconds;
-
-                // เก็บค่า Geofence/Bypass ไว้
-                this.isBypassMode = result.needsCheck === false;
-                this.bypassUrl = result.formUrl;
-                this.target.lat = result.targetLat;
-                this.target.lon = result.targetLon;
-                this.target.dist = result.maxDist;
-                this.target.url = result.formUrl;
-
-                // กำหนด action หลัง Modal ปิด
-                const postModalAction = this.isBypassMode ? 'bypass_redirect' : 'check_geo';
-
-                // *** NEW FLOW: ถ้าเป็นรอบแรกที่ดึง Config (forceModalDisplay=true) ให้แสดง Modal ก่อนเสมอ ***
-                if (forceModalDisplay) {
-                    this.loadAnnouncement(postModalAction, false, {
-                        hideCloseButton: hideCloseButton,
-                        closeDelaySeconds: closeDelaySeconds
-                    });
-                    // สำคัญ: ต้อง return เพื่อรอให้ Modal ปิดก่อน
-                    return;
+                if (result.needsCheck === false) {
+                    this.geofenceChecker.style.display = 'none'; 
+                    this.isBypassMode = true; 
+                    this.bypassUrl = result.formUrl;
+                    return window.open(this.bypassUrl, '_self'); 
                 }
-                
-                // ถ้า forceModalDisplay เป็น false (Modal เพิ่งปิดไปแล้ว) ให้ไป Check Geo ทันที
-                if (postModalAction === 'check_geo') {
-                    this.checkGeolocation();
-                } else if (postModalAction === 'bypass_redirect') {
-                    window.open(this.bypassUrl, '_self');
-                }
-
-                
+                this.target = { lat: result.targetLat, lon: result.targetLon, dist: result.maxDist, url: result.formUrl };
+                this.checkGeolocation(); 
             } else {
-                this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
+                this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message);
             }
-        } catch (error) {
+        } catch {
             this.updateStatus('error', 'การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อกับ Web App ได้');
         }
     }
 
     checkGeolocation() {
-        if (this.target.lat === null) {
-             this.fetchGeofenceConfig(false);
-             return;
-        }
-        
-        this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
+        if (this.target.lat === null) return this.fetchGeofenceConfig();
+        this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาต GPS');
         this.retryButton.style.display = 'none'; 
-
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => this.geoSuccess(position),
-                (error) => this.geoError(error), 
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+                (pos) => this.geoSuccess(pos),
+                (err) => this.geoError(err),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         } else {
-            this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
+            this.updateStatus('error', 'ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ GPS');
         }
     }
     
-    geoSuccess(position) {
-        const userLat = position.coords.latitude;
-        const userLon = position.coords.longitude;
+    geoSuccess(pos) {
+        const userLat = pos.coords.latitude, userLon = pos.coords.longitude;
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
-        const distanceMeters = (distance * 1000).toFixed(0);
-
+        const distM = (distance * 1000).toFixed(0);
         if (distance <= this.target.dist) {
-            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
-            setTimeout(() => {
-                 window.open(this.target.url, '_self');
-            }, 1000);
-
+            this.updateStatus('success', 'ยืนยันสำเร็จ!', `ระยะทาง: ${distM} เมตร`);
+            setTimeout(() => window.open(this.target.url, '_self'), 1000);
         } else {
-            const maxMeters = this.target.dist * 1000;
-            this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
+            const maxM = this.target.dist * 1000;
+            this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distM} เมตร (เกิน ${maxM} เมตร)`);
         }
     }
     
     geoError(error) {
-        let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
-        let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
-
-        if (error.code === 1) {
-            errorMessage += ' (ถูกปฏิเสธ)';
-        } else if (error.code === 2) {
-            errorMessage += ' (ไม่พบตำแหน่ง)';
-        } else if (error.code === 3) {
-            errorMessage += ' (หมดเวลาค้นหา)';
-        }
-        
-        this.updateStatus('error', errorMessage, customMessage);
-        this.retryButton.style.display = 'flex'; 
+        let msg = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
+        if (error.code === 1) msg += ' (ถูกปฏิเสธ)';
+        else if (error.code === 2) msg += ' (ไม่พบตำแหน่ง)';
+        else if (error.code === 3) msg += ' (หมดเวลา)';
+        this.updateStatus('error', msg, 'โปรดเปิด GPS และอนุญาตตำแหน่ง');
+        this.retryButton.style.display = 'flex';
     }
     
     calculateDistance(lat1, lon1, lat2, lon2) {
-        function toRad(Value) { return Value * Math.PI / 180; }
+        const toRad = (x) => x * Math.PI / 180;
         const R = 6371;
         const dLat = toRad(lat2 - lat1);
         const dLon = toRad(lon2 - lon1);
-        const lat1Rad = toRad(lat1);
-        const lat2Rad = toRad(lat2);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-        return R * c;
+        const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    updateStatus(type, title, message) {
-        this.geofenceChecker.classList.remove('loading', 'error', 'success');
+    updateStatus(type, title, msg) {
+        this.geofenceChecker.classList.remove('loading','error','success');
         this.geofenceChecker.classList.add(type);
-
         this.statusTitle.textContent = title;
-        this.statusMessage.textContent = message;
-        
+        this.statusMessage.textContent = msg;
         if (type === 'loading') {
-            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle></svg>';
+            this.statusIconContainer.innerHTML = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="165 57" style="animation: rotate 1s linear infinite;"></circle></svg>';
             this.retryButton.style.display = 'none';
         } else if (type === 'error') {
             this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
@@ -548,6 +337,4 @@ class GeofenceApp {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    new GeofenceApp();
-});
+document.addEventListener('DOMContentLoaded', () => new GeofenceApp());
