@@ -52,7 +52,7 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.mainContainerWrapper.style.display = 'none'; 
         
-        this.pageTitle.textContent = 'ประกาศ'; 
+        this.pageTitle.textContent = 'ประกาศ'; // หน้าแรกและหน้าประกาศใช้ชื่อ 'ประกาศ'
         
         // *** FIX: ซ่อนปุ่มกากบาทไว้ตั้งแต่แรก (ใช้ JS/CSS เพื่อแสดงผล) ***
         this.closeAnnouncementButton.style.display = 'none'; 
@@ -194,14 +194,9 @@ class GeofenceApp {
         // NEW: บังคับให้ Menu Card (login-container/status-card) เริ่มต้นที่ขอบบน
         this.mainMenuCard.style.marginTop = '0';
         document.getElementById('mainContainerWrapper').style.marginTop = '0';
-        // -------------------------------------------------------------------------
-
-        // บังคับใช้ Light Mode
-        document.body.classList.add('light-mode');
-        document.body.classList.remove('dark-mode'); 
         
-        // *** แก้ไข: เปลี่ยนชื่อหน้าเป็น 'เมนู Studio' ***
-        this.pageTitle.textContent = 'เมนู Studio';
+        // *** แก้ไขชื่อหน้าเมื่อเข้าสู่เมนูหลัก ***
+        this.pageTitle.textContent = 'เมนู Studio'; 
         document.getElementById('menuTitle').textContent = 'เมนู Studio'; 
         document.getElementById('mainMenuCard').querySelector('p').textContent = 'เลือก Studio ที่ต้องการเข้าถึง';
         // -------------------------------------------------
@@ -269,7 +264,7 @@ class GeofenceApp {
             newButton.addEventListener('click', () => {
                 // *** FIX: เปลี่ยนกลับไปใช้ window.open('_blank') เพื่อเปิดหน้าต่างใหม่ ***
                 const url = `?studio=${encodeURIComponent(name)}`;
-                window.open(url, '_blank'); 
+                window.open(window.location.origin + window.location.pathname + url, '_blank'); 
             });
             
             this.menuButtonsContainer.appendChild(newButton);
