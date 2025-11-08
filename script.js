@@ -49,7 +49,7 @@ class GeofenceApp {
 
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
-        this.mainContainerWrapper.style.display = 'none'; // **FIXED: ซ่อน Container หลัก**
+        this.mainContainerWrapper.style.display = 'none';
         
         this.pageTitle.textContent = 'ประกาศ'; 
         
@@ -266,7 +266,7 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // *** แก้ไข: เปิดหน้าต่างใหม่สำหรับลิงก์เมนูหลัก ***
+                // *** FIX: เปลี่ยนกลับไปใช้ window.open('_blank') เพื่อเปิดหน้าต่างใหม่ ***
                 const url = `?studio=${encodeURIComponent(name)}`;
                 window.open(url, '_blank'); 
             });
