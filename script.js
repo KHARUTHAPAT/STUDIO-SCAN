@@ -28,7 +28,7 @@ class GeofenceApp {
         
         // Geofencing Parameters
         this.params = new URLSearchParams(window.location.search);
-        this.studioName = this.params.get('studio');
+        this.studioName = this.params.get('studio') || sessionStorage.getItem('currentStudio');
         
         this.target = { lat: null, lon: null, dist: null, url: null };
 
@@ -48,8 +48,14 @@ class GeofenceApp {
 
     init() {
         this.bindEvents();
-        const initialAction = this.studioName ? 'studio_check' : 'main_menu';
-        this.loadAnnouncement(initialAction, true); 
+
+        // 🔑 แก้ปัญหา: ถ้ามี studioName ให้ล็อกอยู่หน้านั้น
+        if (this.studioName) {
+            sessionStorage.setItem('currentStudio', this.studioName);
+            this.loadAnnouncement('studio_check', true);
+        } else {
+            this.showMainMenu();
+        }
     }
     
     _onAnnouncementButtonClick = (event) => {
@@ -85,6 +91,7 @@ class GeofenceApp {
     }
     
     showMainMenu() {
+        sessionStorage.removeItem('currentStudio');
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         document.body.style.overflow = 'auto'; 
@@ -136,14 +143,15 @@ class GeofenceApp {
             btn.type = 'button';
             btn.innerHTML = `<div class="button-bg"></div><span class="button-text">${name}</span><div class="button-glow"></div>`;
             btn.addEventListener('click', () => {
+                sessionStorage.setItem('currentStudio', name);
                 const url = `?studio=${encodeURIComponent(name)}`;
-                window.open(url, '_blank'); 
+                window.location.href = url; // reload page แต่ไม่กลับเมนู
             });
             this.menuButtonsContainer.appendChild(btn);
         });
     }
 
-    // --- Announcement Logic (แสดงเต็มก่อนเสมอ + hideClose/countdown) ---
+    // --- Announcement Logic ---
     async loadAnnouncement(action, isInitialLoad = false) {
         if (!this.announcementModalOverlay) {
             if (action === 'studio_check') return this.fetchGeofenceConfig();
@@ -172,24 +180,23 @@ class GeofenceApp {
         }
 
         try {
-            // 1️⃣ ดึงข้อมูล geofence (เก็บไว้เฉย ๆ ยังไม่รัน)
+            // 1️⃣ ดึงข้อมูล geofence
             const formData = new FormData();
             formData.append('action', 'get_geofence_config');
             formData.append('studio', this.studioName || '');
             const response = await fetch(this.WEB_APP_URL, { method: 'POST', body: formData });
             const result = await response.json();
 
-            // เก็บผลไว้ใช้ภายหลังตอนปิดประกาศ
             this.pendingAction = { type: 'geofence', data: result };
 
-            // ตั้งค่าปุ่มปิด
+            // --- 🔑 แก้ปัญหาปุ่มกากบาท ---
             if (result.hideClose) {
                 this.closeAnnouncementButton.style.display = 'none';
+            } else if (result.countdown && !isNaN(result.countdown)) {
+                this.closeAnnouncementButton.style.display = 'none';
+                this.startCountdown(result.countdown);
             } else {
                 this.closeAnnouncementButton.style.display = 'flex';
-                if (result.countdown && !isNaN(result.countdown)) {
-                    this.startCountdown(result.countdown);
-                }
             }
 
             // 2️⃣ โหลดประกาศ (รูป / ปุ่ม)
@@ -216,7 +223,6 @@ class GeofenceApp {
         }
     }
 
-    // --- เมื่อปิดประกาศแล้วค่อยไปทำต่อ (เช่น ตรวจพิกัด) ---
     closeAnnouncementModal() {
         this.announcementModalOverlay.classList.remove('show', 'initial-show');
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
@@ -254,14 +260,16 @@ class GeofenceApp {
         }, 300);
     }
 
-    /** ฟังก์ชันหน่วงเวลาและนับถอยหลังบนปุ่มปิด */
     startCountdown(seconds) {
         const btn = this.closeAnnouncementButton;
         let remaining = seconds;
         btn.disabled = true;
+        btn.style.display = 'flex'; // แสดงปุ่มตอนเริ่ม countdown
+        btn.textContent = remaining;
         const timer = setInterval(() => {
+            remaining--;
             btn.textContent = remaining;
-            if (--remaining <= 0) {
+            if (remaining <= 0) {
                 clearInterval(timer);
                 btn.textContent = '×';
                 btn.disabled = false;
