@@ -1,644 +1,329 @@
-// Geofencing and Announcement Logic
-class GeofenceApp {
-    constructor() {
-        // UI Elements
-        this.mainContainerWrapper = document.getElementById('mainContainerWrapper');
-        this.mainMenuCard = document.getElementById('mainMenuCard');
-        this.geofenceChecker = document.getElementById('geofenceChecker');
-        this.menuButtonsContainer = document.getElementById('adminMenuButtons');
-        
-        this.statusTitle = document.getElementById('statusTitle');
-        this.statusMessage = document.getElementById('statusMessage');
-        this.statusIconContainer = document.getElementById('statusIcon');
-        this.retryButton = document.getElementById('retryButton');
-        this.pageTitle = document.getElementById('pageTitle');
-        
-        // Announcement Modal Elements
-        this.announcementModalOverlay = document.getElementById('announcementModalOverlay');
-        this.announcementImage = document.getElementById('announcementImage');
-        this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
-        this.countdownText = document.getElementById('countdownText'); 
-        this.closeIcon = this.closeAnnouncementButton.querySelector('.close-icon'); 
-        this.modalLoader = document.getElementById('modalLoader'); 
-        
-        // NEW: Announcement Button Elements
-        this.announcementActionArea = document.getElementById('announcementActionArea');
-        this.announcementActionButton = document.getElementById('announcementActionButton');
-
-        // Configuration 
-        // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzpSIcV8uwcUXf4xiPQ-VTDiHoMhWZGsl3XJ35qJU6dcooCsC5kouGdMLinVHNGiMES/exec';
-        this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
-        
-        // Geofencing Parameters
-        this.params = new URLSearchParams(window.location.search);
-        this.studioName = this.params.get('studio');
-        
-        this.target = { lat: null, lon: null, dist: null, url: null };
-
-        this.isBypassMode = false;
-        this.bypassUrl = null; 
-        
-        // NEW: ตัวแปรสำหรับควบคุม Announcement
-        this.announcementControl = {
-            hideCloseBtn: false, // D: 1=ซ่อนปุ่มกากบาท
-            countdownSec: 0 // E: วินาทีนับถอยหลังก่อนแสดงปุ่มกากบาท
-        };
-        this.isAnnouncementActive = false; // NEW: สถานะ Modal ปัจจุบัน
-        this.countdownInterval = null; // NEW: ตัวแปรเก็บ Interval สำหรับนับถอยหลัง
-
-        // *** FIXED: ซ่อนทุกอย่างที่เกี่ยวกับหน้าหลักไว้ตั้งแต่เริ่มต้น ***
-        this.geofenceChecker.style.display = 'none';
-        this.mainMenuCard.style.display = 'none';
-        this.mainContainerWrapper.style.display = 'none'; 
-        
-        this.pageTitle.textContent = 'ประกาศ'; // ชื่อหน้า: แสดง "ประกาศ"
-        
-        // *** FIX: ซ่อนปุ่มกากบาทไว้ตั้งแต่แรก (ใช้ JS/CSS เพื่อแสดงผล) ***
-        this.closeAnnouncementButton.style.display = 'none'; 
-        
-        // *** FIXED: บังคับให้ Body เป็น Light Mode (พื้นหลังขาว) เสมอ ***
-        document.body.classList.add('light-mode');
-        document.body.classList.remove('dark-mode'); 
-        document.body.style.backgroundColor = '#f8fafc'; // สีขาวตาม Light Mode CSS
-        // -----------------------------------------------------------
-
-        // *** แก้ไข: เพิ่มการจัดการ body overflow สำหรับ Menu/Checker ***
-        document.body.style.overflow = 'hidden'; 
-        // -----------------------------------------------------------
-
-        this.init();
-    }
-
-    init() {
-        this.bindEvents();
-        
-        // 1. ถ้ามี studioName (จากการรีเฟรชลิงก์แต่ละปุ่ม) ต้องเข้าสู่ flow Studio
-        if (this.studioName) {
-            // Action หลังปิดประกาศ: 'geofence_check' (เพื่อบังคับให้ไป checkGeolocation ทันที)
-            this.loadStudioConfigAndAnnouncement('geofence_check');
-        } else {
-            // 2. ถ้าไม่มี studioName ให้แสดง Menu หลัก (Initial Load: Admin Mode)
-            
-            // Action หลังปิดประกาศ: 'main_menu' (เพื่อไป showMainMenu)
-            const initialAction = 'main_menu';
-            // NEW: กำหนดให้เป็นค่าควบคุมปกติ (แสดงปุ่มกากบาททันที)
-            const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
-            
-            this.loadAnnouncement(initialAction, true, initialControl); 
-        }
-    }
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-T-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title id="pageTitle">ประกาศ</title>
     
-    _onAnnouncementButtonClick = (event) => {
-        const url = event.currentTarget.getAttribute('data-url');
-        if (url) {
-            window.open(url, '_blank');
-        }
-    }
-
-    bindEvents() {
-        this.retryButton.addEventListener('click', () => this.checkGeolocation());
-        
-        if (this.closeAnnouncementButton) {
-            this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
-        }
-        
-        // เมื่อภาพโหลดเสร็จ (สำเร็จ)
-        this.announcementImage.addEventListener('load', () => { 
-             this.modalLoader.style.display = 'none';
-             this.announcementImage.style.display = 'block';
-             
-             // NEW: ลบ .initial-show ออกที่นี่ (เพื่อให้ปุ่มถูกซ่อนก่อน)
-             this.announcementModalOverlay.classList.remove('initial-show');
-             
-             // *** FIX: เรียกฟังก์ชันควบคุมปุ่มและ Flow ต่อไป เมื่อรูปภาพโหลดเสร็จแล้วเท่านั้น ***
-             const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
-             this.startCloseButtonControl(postAction);
-        });
-
-        // เมื่อภาพโหลดเสร็จ (ล้มเหลว)
-        this.announcementImage.addEventListener('error', () => {
-             this.modalLoader.style.display = 'none';
-             
-             // NEW: ลบ .initial-show ออกที่นี่
-             this.announcementModalOverlay.classList.remove('initial-show');
-             
-             this.announcementImage.style.display = 'none'; 
-             
-             // *** FIX: เรียกฟังก์ชันควบคุมปุ่มและ Flow ต่อไป เมื่อรูปภาพโหลดล้มเหลวเท่านั้น ***
-             const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
-             this.startCloseButtonControl(postAction);
-
-             // หากไม่มีปุ่ม Action ให้ปิด Modal เลย (สำหรับกรณีที่ไม่มีทั้งรูปและปุ่ม)
-             if (this.announcementActionArea.style.display === 'none' && !this.announcementImage.src) {
-                 this.isAnnouncementActive = false;
-                 this.closeAnnouncementModal(); 
-             }
-             console.error("Announcement Image failed to load or permission denied.");
-        });
-    }
+    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
     
-    // --- App Flow Control ---
-
-    // NEW FUNCTION: จัดการ Flow สำหรับ Studio
-    async loadStudioConfigAndAnnouncement(action) {
-        // 1. ดึงค่า config จาก Apps Script (รวมถึง D และ E)
-        const configResult = await this.fetchGeofenceConfig(true); 
-
-        // 2. ตั้งค่า Announcement Control 
-        if (configResult && configResult.announcementControl) {
-            this.announcementControl = configResult.announcementControl;
-            
-            // NEW: ต้องดึง config พื้นฐานมาด้วย (สำหรับ Geofence Check/Bypass)
-            this.target.lat = configResult.targetLat;
-            this.target.lon = configResult.targetLon;
-            this.target.dist = configResult.maxDist;
-            this.target.url = configResult.formUrl;
-            this.isBypassMode = configResult.needsCheck === false;
-            this.bypassUrl = configResult.formUrl;
-
-        } else {
-            this.announcementControl = { hideCloseBtn: false, countdownSec: 0 }; 
-            if (action === 'geofence_check') {
-                alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
-                window.location.href = window.location.origin + window.location.pathname; 
-                return;
-            }
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ============================================== */
+        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
+        /* ============================================== */
+        html, body {
+            /* ลบ height: 100%; ออกเพื่อให้เนื้อหาไหลและ body ขยายได้ */
+            /* ลบ: overflow: hidden !important; */ 
         }
         
-        // 3. ตรวจสอบ Bypass Mode ทันที (ก่อนแสดงประกาศ)
-        if (this.isBypassMode) {
-             // ถ้าเป็น Bypass Mode ให้ตั้งค่า Action เป็น Redirect
-             action = 'bypass_redirect';
+        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (แก้ไขการกินขอบ) *** */
+        body.menu-scrollable {
+            /* ยกเลิกการจัดให้อยู่ตรงกลางของ Body */
+            align-items: flex-start !important; /* จัดชิดด้านบน */
+            justify-content: center !important; /* ยังคงจัดอยู่ตรงกลางแนวนอน */
+            padding-top: 20px; /* เพิ่ม padding ด้านบนให้มีระยะห่าง */
+            padding-bottom: 20px; /* เพิ่ม padding ด้านล่าง */
+            min-height: 100vh; 
         }
         
-        // 4. โหลดประกาศด้วยค่าควบคุมที่ถูกต้อง (แสดงประกาศแค่ 1 ครั้ง)
-        this.loadAnnouncement(action, true, this.announcementControl); 
-    }
-    
-    continueAppFlow() {
-        this.isBypassMode = false;
-        this.bypassUrl = null;
-        this.showMainMenu();
-    }
-    
-    // --- UI/Mode Handlers ---
-
-    showMainMenu() {
-        // *** แก้ไข: บังคับให้เป็น Light Mode เมื่อเข้าสู่หน้าเมนูหลัก ***
-        document.body.classList.add('light-mode'); 
-        document.body.classList.remove('dark-mode'); 
-        document.body.style.backgroundColor = '#f8fafc'; 
-        // -----------------------------------------------------------
-        
-        this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
-        this.geofenceChecker.style.display = 'none';
-        this.mainMenuCard.style.display = 'flex';
-        
-        // *** แก้ไข: ทำให้หน้าเมนูสามารถเลื่อนได้และจัดชิดบน ***
-        document.body.style.overflow = 'auto'; 
-        document.body.classList.add('menu-scrollable');
-        
-        // NEW: บังคับให้ Menu Card (login-container/status-card) เริ่มต้นที่ขอบบน
-        this.mainMenuCard.style.marginTop = '0';
-        document.getElementById('mainContainerWrapper').style.marginTop = '0';
-        
-        // *** แก้ไขชื่อหน้าเมื่อเข้าสู่เมนูหลัก ***
-        this.pageTitle.textContent = 'เมนู Studio'; 
-        document.getElementById('menuTitle').textContent = 'เมนู Studio'; 
-        document.getElementById('mainMenuCard').querySelector('p').textContent = 'เลือก Studio ที่ต้องการเข้าถึง';
-        // -------------------------------------------------
-
-        this.fetchStudioNamesAndSetupMenu();
-    }
-
-    showGeofenceChecker() {
-        // *** แก้ไข: บังคับให้เป็น Light Mode/พื้นหลังขาว เมื่อเข้าสู่หน้า Geofence Checker ***
-        document.body.classList.add('light-mode'); 
-        document.body.classList.remove('dark-mode'); 
-        document.body.style.backgroundColor = '#f8fafc'; 
-        // -----------------------------------------------------------
-        
-        this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
-        this.mainMenuCard.style.display = 'none';
-        this.geofenceChecker.style.display = 'flex';
-        this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
-
-        // *** แก้ไข: ล็อคหน้าจอไม่ให้เลื่อนเมื่อเข้าสู่ Geofence Checker (ลบ Class และรีเซ็ต margin) ***
-        document.body.style.overflow = 'hidden'; 
-        document.body.classList.remove('menu-scrollable');
-        this.mainMenuCard.style.marginTop = '';
-        document.getElementById('mainContainerWrapper').style.marginTop = '';
-        // ----------------------------------------------------------------------------
-    }
-    
-    async fetchStudioNamesAndSetupMenu() {
-        try {
-            const formData = new FormData();
-            formData.append('action', 'get_studio_list');
-
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData 
-            });
-            
-            const result = await response.json();
-            
-            if (result.success && result.studioNames && result.studioNames.length > 0) {
-                this.setupMenuButtons(result.studioNames);
-            } else {
-                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้ (โปรดตรวจสอบชีต \'Studio\' และสิทธิ์การเข้าถึง)</p>';
-                console.error("No studio names returned or failed to fetch.");
-            }
-
-        } catch (error) {
-            this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">การเชื่อมต่อ API ล้มเหลว</p>';
-            console.error("Failed to fetch studio list:", error);
+        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
+        /* สีเริ่มต้นของ Card ถูกตั้งเป็น Light Mode ใน style.css */
+        .status-card {
+            background: #ffffff;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            padding: 40px 32px;
+            position: relative;
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         }
-    }
+        .status-card h1 {
+            color: #000000; 
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .status-card p {
+            color: #475569; 
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .status-icon svg {
+            color: #3b82f6; 
+            width: 100%;
+            height: 100%;
+        }
 
-    setupMenuButtons(studioNames) {
-        this.menuButtonsContainer.innerHTML = ''; 
+        /* เมนูแอดมิน */
+        #adminMenuButtons {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .neural-button {
+            text-decoration: none;
+            min-height: 55px;
+        }
         
-        studioNames.forEach(name => {
-            const newButton = document.createElement('button');
-            newButton.className = 'neural-button';
-            newButton.type = 'button';
-            newButton.style.marginTop = '0';
+        /* สไตล์สำหรับ Geofencing Status Card */
+        #geofenceChecker {
+            display: none;
+            width: 100%;
+        }
+        
+        /* สไตล์สำหรับ Modal (Announcement) */
+        .neural-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* FIX: ปรับความทึบเป็น 0.6 (เข้มขึ้นตามต้องการ) */
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        /* NEW: Class สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ */
+        .neural-modal-overlay.initial-show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .neural-modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .neural-modal-content {
+            background: #000;
+            border: none;
+            padding: 0;
+            border-radius: 20px;
+            max-width: 90vw;
+            width: 400px;
+            height: auto;
+            max-height: 90vh;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            overflow: hidden;
+            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
+            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
+        }
+        .neural-modal-overlay.show .neural-modal-content,
+        .neural-modal-overlay.initial-show .neural-modal-content {
+             transform: translateY(0);
+             opacity: 1;
+        }
+        /* *** แก้ไข: ปรับสไตล์ของปุ่มปิดสำหรับ Countdown *** */
+        .modal-close-button {
+            position: fixed; 
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.35); /* ปรับให้จางลง */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            z-index: 1010; 
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close-button:hover {
+            background: #fff;
+            color: #000;
+        }
+        
+        /* สไตล์สำหรับตัวเลขที่ซ่อนกากบาทอยู่ */
+        #countdownText {
+            font-size: 1.2rem; 
+            font-weight: 400; /* ตัวบาง */
+            color: #ffffff; /* สีขาวปกติ */
+            display: none;
+        }
+        
+        /* สไตล์สำหรับกากบาท */
+        .close-icon {
+            display: block; 
+        }
+
+
+        .modal-body {
+            padding: 0; 
+            line-height: 0; 
+            position: relative; 
+            min-height: 150px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1; /* ให้ Body ขยายได้ */
+            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
+        }
+        .modal-body img {
+            width: 100%;
+            height: auto;
+            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
+            object-fit: contain; 
+            border-radius: 20px; 
+            margin-top: 0;
+        }
+        .login-header {
+            display: none; 
+        }
+
+        /* NEW: สไตล์สำหรับ Modal Loader */
+        #modalLoader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .neural-spinner {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            justify-content: center;
+            width: 40px; 
+            height: 40px;
+        }
+        .spinner-segment {
+            width: 6px; 
+            height: 25px; 
+            background: #3b82f6; 
+            border-radius: 3px;
+            animation: neuralSpinner 1.2s ease-in-out infinite;
+        }
+        .spinner-segment:nth-child(2) { animation-delay: 0.1s; }
+        .spinner-segment:nth-child(3) { animation-delay: 0.2s; }
+
+        @keyframes neuralSpinner {
+            0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.8; }
+            40% { transform: scaleY(1); opacity: 1; }
+        }
+        
+        /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
+        #announcementActionArea {
+            padding: 2px 32px 0px !important; /* เปลี่ยนจาก 0px เป็น 2px */
+            margin-top: 0; 
+            z-index: 5; 
+        }
+        .neural-modal-content {
+            padding-bottom: 0 !important; 
+        }
+        /* แก้ไข: เพิ่มสไตล์เฉพาะสำหรับปุ่ม action ใน Modal ให้ชิดขอบล่าง */
+        #announcementActionButton {
+            border-radius: 0 0 20px 20px !important;
+            min-height: 55px;
+        }
+        #announcementActionButton .button-bg {
+             border-radius: 0 0 20px 20px !important;
+        }
+    </style>
+</head>
+<body class="light-mode">
+    <div class="neural-background">
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+        <div class="neural-node"></div>
+    </div>
+
+    <div class="login-container" id="mainContainerWrapper" style="display: none !important;">
+        
+        <div class="status-card" id="mainMenuCard" style="display:none;"> 
+            <div class="ai-glow"></div>
             
-            newButton.innerHTML = `
+            <div class="login-header" style="margin-bottom: 10px;">
+                <h1 style="font-size: 1.8rem;" id="menuTitle">ประกาศ</h1>
+                <p>เลือก Studio ที่ต้องการเข้าถึง</p>
+            </div>
+            
+            <div id="adminMenuButtons">
+                </div>
+            
+        </div>
+        
+        <div class="status-card" id="geofenceChecker">
+             <div class="ai-glow"></div>
+            
+            <div class="status-icon" id="statusIcon">
+                <svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
+                </svg>
+            </div>
+            
+            <h1 id="statusTitle">กำลังตรวจสอบตำแหน่ง Studio...</h1> 
+            <p id="statusMessage">โปรดอนุญาตให้เข้าถึงตำแหน่ง GPS ของคุณ</p>
+
+            <button class="neural-button" id="retryButton" style="display:none; margin-bottom: 0;">
                 <div class="button-bg"></div>
-                <span class="button-text">${name}</span> <div class="button-glow"></div>
-            `;
+                <span class="button-text">ลองใหม่อีกครั้ง</span>
+                <div class="button-glow"></div>
+            </button>
+        </div>
+        
+    </div>
 
-            newButton.addEventListener('click', () => {
-                // *** FIX: เปิดหน้าต่างใหม่ไปยังลิงก์ Studio ***
-                const url = `?studio=${encodeURIComponent(name)}`;
-                window.open(window.location.origin + window.location.pathname + url, '_blank'); 
-            });
+    <div class="neural-modal-overlay initial-show" id="announcementModalOverlay" style="display:flex;">
+        <div class="login-card neural-modal-content">
+            <div class="ai-glow"></div>
+            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
+                <span id="countdownText"></span>
+                <span class="close-icon">&times;</span> 
+            </button>
+            <div id="modalLoader" class="neural-spinner"> 
+                <div class="spinner-segment"></div>
+                <div class="spinner-segment"></div>
+                <div class="spinner-segment"></div>
+            </div>
             
-            this.menuButtonsContainer.appendChild(newButton);
-        });
-    }
-
-    // --- Announcement Logic (พร้อม Timeout) ---
-
-    // control: { hideCloseBtn: boolean, countdownSec: number }
-    async loadAnnouncement(action, isInitialLoad = false, control = null) {
-        
-        // หากมีการส่งค่า control มาให้ใช้เลย (สำหรับ Initial Load)
-        if (control) {
-             this.announcementControl = control;
-        }
-
-        if (!this.announcementModalOverlay) {
-             // หากไม่มี Modal ให้ไปต่อทันที (กรณีนี้ไม่ควรเกิดขึ้น)
-             this.startCloseButtonControl(action);
-             return;
-        }
-        
-        this.isAnnouncementActive = true; 
-        // *** NEW: ซ่อนปุ่มทั้งหมดไว้ตั้งแต่แรก เพื่อรอ Logic ใน startCloseButtonControl ***
-        this.closeAnnouncementButton.style.display = 'none'; 
-        this.countdownText.style.display = 'none'; 
-        this.closeIcon.style.display = 'none';
-        // --------------------------------------------------------------------------
-
-        // เคลียร์ Interval เก่าก่อนเริ่ม
-        if (this.countdownInterval) {
-            clearInterval(this.countdownInterval);
-            this.countdownInterval = null;
-        }
-        
-        if (!isInitialLoad) {
-            this.announcementModalOverlay.classList.remove('show', 'initial-show');
-            this.announcementModalOverlay.style.display = 'none';
-        }
-        
-        this.announcementImage.style.display = 'none';
-        this.announcementActionArea.style.display = 'none'; 
-
-        this.announcementModalOverlay.setAttribute('data-post-action', action);
-        this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
-        
-        // NEW: กำหนดให้ Modal ต้องแสดงก่อนเริ่มโหลด API เพื่อให้ .initial-show ทำงาน
-        if (isInitialLoad) {
-            this.announcementModalOverlay.style.display = 'flex'; 
-            this.modalLoader.style.display = 'flex';
-            this.announcementModalOverlay.classList.add('show', 'initial-show');
-        } else {
-            this.announcementModalOverlay.style.display = 'flex'; 
-            this.modalLoader.style.display = 'flex';
-            setTimeout(() => {
-                 this.announcementModalOverlay.classList.add('show');
-            }, 50);
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('action', 'get_announcement_image');
-            formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
-
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData 
-            });
+            <div class="modal-body">
+                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
+                
+            </div>
             
-            const result = await response.json();
+            <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
+                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
+                    <div class="button-bg"></div>
+                    <span class="button-text">ข้อความปุ่ม</span> 
+                    <div class="button-glow"></div>
+                </button>
+            </div>
             
-            const hasImage = result.success && result.imageUrl && result.imageUrl.trim() !== '';
-            const hasButton = result.success && result.buttonText && result.buttonUrl; 
+        </div>
+    </div>
 
-            // ประกาศจะไม่หายเองอัตโนมัติอีกต่อไป
-            if (hasImage || hasButton) {
-                
-                if (hasImage) {
-                    // *** FIX: ตั้งค่า SRC ให้รูปภาพเริ่มโหลดทันที ***
-                    this.announcementImage.src = result.imageUrl.trim(); 
-                } else {
-                    this.modalLoader.style.display = 'none'; 
-                    this.announcementModalOverlay.classList.remove('initial-show'); 
-                    // หากไม่มีภาพ ให้เรียก startCloseButtonControl ทันที
-                    this.startCloseButtonControl(action); 
-                }
-                
-                if (hasButton) {
-                    this.announcementActionArea.style.display = 'block';
-                    this.announcementActionButton.style.display = 'flex';
-                    this.announcementActionButton.querySelector('.button-text').textContent = result.buttonText.trim();
-                    this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
-                    this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
-                }
-                
-            } else {
-                this.isAnnouncementActive = false; 
-                this.closeAnnouncementModal();
-            }
-        } catch (error) {
-            console.error('Error fetching announcement:', error);
-            this.isAnnouncementActive = false; 
-            this.closeAnnouncementModal();
-        }
-    }
-    
-    // ฟังก์ชันสำหรับควบคุมการแสดงปุ่มปิดและนับถอยหลัง (D และ E)
-    startCloseButtonControl(action) {
-        if (!this.announcementModalOverlay) {
-             // ถ้า Modal ไม่มีอยู่ ให้ทำตาม Action ที่ได้รับมา
-             if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
-             else if (action === 'bypass_redirect') { window.open(this.bypassUrl, '_self'); } 
-             else { this.continueAppFlow(); }
-             return;
-        }
-        
-        this.announcementModalOverlay.setAttribute('data-post-action', action);
-        
-        if (!this.isAnnouncementActive) {
-            // Modal ปิดไปแล้ว/ไม่มีเนื้อหา ให้ทำตาม Action ที่ได้รับมา
-             if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
-             else if (action === 'bypass_redirect') { window.open(this.bypassUrl, '_self'); } 
-             else { this.continueAppFlow(); }
-             return;
-        }
-        
-        // 1. ตรวจสอบเงื่อนไขซ่อนปุ่มปิด (D=1)
-        if (this.announcementControl.hideCloseBtn) {
-            this.closeAnnouncementButton.style.display = 'none';
-            this.countdownText.style.display = 'none';
-            this.closeIcon.style.display = 'none';
-            
-        } else if (this.announcementControl.countdownSec > 0) {
-            // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
-            let remaining = this.announcementControl.countdownSec;
-            
-            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
-            this.closeAnnouncementButton.style.display = 'flex'; 
-            this.closeAnnouncementButton.disabled = true; // *** FIX: ปิดใช้งานปุ่มขณะนับ ***
-            this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
-            this.countdownText.style.display = 'block'; // แสดงตัวนับ
-
-            this.countdownInterval = setInterval(() => {
-                this.countdownText.textContent = remaining; // แสดงตัวเลขปัจจุบัน
-                remaining--;
-
-                if (remaining < 0) {
-                    clearInterval(this.countdownInterval);
-                    this.countdownInterval = null;
-                    
-                    this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
-                    this.closeIcon.style.display = 'block'; // แสดงกากบาทเมื่อนับเสร็จ
-                    this.closeAnnouncementButton.disabled = false; // *** FIX: เปิดใช้งานปุ่มเมื่อนับเสร็จ ***
-                }
-            }, 1000);
-            
-        } else {
-            // 3. เงื่อนไขปกติ (ไม่มี D/E หรือ D=0, E=0)
-            this.closeAnnouncementButton.style.display = 'flex'; 
-            this.closeIcon.style.display = 'block';
-            this.countdownText.style.display = 'none';
-            this.closeAnnouncementButton.disabled = false; // *** FIX: เปิดใช้งานปุ่มเมื่อไม่มีการนับ ***
-        }
-    }
-
-
-    closeAnnouncementModal() {
-        this.announcementModalOverlay.classList.remove('show', 'initial-show');
-        
-        this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
-        
-        // เคลียร์ Interval
-        if (this.countdownInterval) {
-            clearInterval(this.countdownInterval);
-            this.countdownInterval = null;
-        }
-        this.isAnnouncementActive = false;
-        
-        const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
-        
-        setTimeout(() => {
-            this.announcementModalOverlay.style.display = 'none';
-            this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
-            
-            if (postAction === 'bypass_redirect' && this.bypassUrl) {
-                // Flow 1: ประกาศ -> Redirect (เมื่อผ่าน Geofence หรือเป็น Bypass)
-                window.open(this.bypassUrl, '_self'); 
-            } else if (postAction === 'geofence_check') {
-                // Flow 2: ประกาศ -> ตรวจสอบพิกัด (เมื่อเข้า Studio ครั้งแรก/รีเฟรช)
-                this.showGeofenceChecker();
-                this.checkGeolocation();
-            } else if (postAction === 'main_menu') {
-                 // Flow 3: ประกาศ (Admin) -> เมนูหลัก
-                 this.continueAppFlow();
-            }
-        }, 300); 
-    }
-
-    // --- Geofencing Logic ---
-
-    // แก้ไข: เพิ่ม isPreload flag และเปลี่ยนให้ return result แทนการเรียกฟังก์ชันอื่น
-    async fetchGeofenceConfig(isPreload = false) {
-        if (!this.studioName) {
-            this.continueAppFlow(); 
-            return null;
-        }
-        
-        if (!isPreload) {
-             // *** FIX: เมื่อเข้าหน้า Geofence Checker ให้กลับไปใช้ Light Mode ***
-             this.showGeofenceChecker(); 
-             this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
-        }
-
-        const formData = new FormData();
-        formData.append('action', 'get_geofence_config');
-        formData.append('studio', this.studioName);
-
-        try {
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                if (isPreload) {
-                   return result; // คืนค่าทั้งหมดเมื่อเป็น Preload (เพื่อดึง D/E)
-                }
-                
-                // --- โหมดการประมวลผลหลัง Preload (ถ้าไม่ Preload จะรันต่อที่นี่) ---
-                this.announcementControl = result.announcementControl || { hideCloseBtn: false, countdownSec: 0 };
-                
-                if (result.needsCheck === false) {
-                    this.geofenceChecker.style.display = 'none'; 
-                    this.isBypassMode = true; 
-                    this.bypassUrl = result.formUrl;
-                    
-                    // ประกาศรอบที่ 2 (Bypass Mode) -> Redirect 
-                    this.loadAnnouncement('bypass_redirect', false, this.announcementControl); 
-                    return result; 
-                }
-                
-                // Geofence Check Required
-                this.target.lat = result.targetLat;
-                this.target.lon = result.targetLon;
-                this.target.dist = result.maxDist;
-                this.target.url = result.formUrl;
-                
-                // เริ่มเช็คพิกัด
-                this.checkGeolocation(); 
-                return result;
-                
-            } else {
-                if (!isPreload) {
-                   this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
-                }
-                // *** FIXED: หากโหลด Config ล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
-                if (this.studioName) {
-                    window.location.href = window.location.origin + window.location.pathname; 
-                }
-                return null;
-            }
-        } catch (error) {
-            if (!isPreload) {
-                this.updateStatus('error', 'การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อกับ Web App ได้');
-            }
-            // *** FIXED: หากเชื่อมต่อล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
-            if (this.studioName) {
-                window.location.href = window.location.origin + window.location.pathname; 
-            }
-            return null;
-        }
-    }
-
-    checkGeolocation() {
-        if (this.target.lat === null) {
-             // NEW: ใช้ fetchGeofenceConfig แบบไม่ Preload เพื่อเข้า Flow การตรวจสอบ
-             this.fetchGeofenceConfig(false); 
-             return;
-        }
-        
-        this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
-        this.retryButton.style.display = 'none'; 
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => this.geoSuccess(position),
-                (error) => this.geoError(error), 
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
-            );
-        } else {
-            this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
-        }
-    }
-    
-    geoSuccess(position) {
-        const userLat = position.coords.latitude;
-        const userLon = position.coords.longitude;
-        const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
-        const distanceMeters = (distance * 1000).toFixed(0);
-
-        if (distance <= this.target.dist) {
-            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
-            setTimeout(() => {
-                 // *** FIXED: Redirect ไป URL ปลายทางทันที (ลบการเรียก Modal ซ้ำ) ***
-                 window.open(this.target.url, '_self'); 
-            }, 1000);
-
-        } else {
-            const maxMeters = this.target.dist * 1000;
-            this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
-        }
-    }
-    
-    geoError(error) {
-        let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
-        let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
-
-        if (error.code === 1) {
-            errorMessage += ' (ถูกปฏิเสธ)';
-        } else if (error.code === 2) {
-            errorMessage += ' (ไม่พบตำแหน่ง)';
-        } else if (error.code === 3) {
-            errorMessage += ' (หมดเวลาค้นหา)';
-        }
-        
-        this.updateStatus('error', errorMessage, customMessage);
-        this.retryButton.style.display = 'flex'; 
-    }
-    
-    calculateDistance(lat1, lon1, lat2, lon2) {
-        function toRad(Value) { return Value * Math.PI / 180; }
-        const R = 6371;
-        const dLat = toRad(lat2 - lat1);
-        const dLon = toRad(lon2 - lon1);
-        const lat1Rad = toRad(lat1);
-        const lat2Rad = toRad(lat2);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-        return R * c;
-    }
-
-    updateStatus(type, title, message) {
-        this.geofenceChecker.classList.remove('loading', 'error', 'success');
-        this.geofenceChecker.classList.add(type);
-
-        this.statusTitle.textContent = title;
-        this.statusMessage.textContent = message;
-        
-        if (type === 'loading') {
-            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle></svg>';
-            this.retryButton.style.display = 'none';
-        } else if (type === 'error') {
-            this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
-            this.retryButton.style.display = 'flex';
-        } else if (type === 'success') {
-            this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
-            this.retryButton.style.display = 'none';
-        }
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    new GeofenceApp();
-});
+    <script src="script.js"></script>
+</body>
+</html>
