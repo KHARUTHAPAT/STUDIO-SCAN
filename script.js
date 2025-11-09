@@ -27,7 +27,7 @@ class GeofenceApp {
 
         // Configuration 
         // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqxAJVdNuARRDychtqKo6KL7zOoqrG3hGD4UhFqgrH0HWtRimILc4DiBgGAzDhM7JI/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzpSIcV8uwcUXf4xiPQ-VTDiHoMhWZGsl3XJ35qJU6dcooCsC5kouGdMLinVHNGiMES/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -334,9 +334,6 @@ class GeofenceApp {
             }, 50);
         }
 
-        // *** FIX: ตัดการเรียก API get_announcement_image ออกไป
-        // เพื่อให้รูปภาพโหลดเร็วขึ้น โดยให้รูปภาพโหลดโดยตรงผ่าน src และใช้ Event Listener
-        
         try {
             const formData = new FormData();
             formData.append('action', 'get_announcement_image');
@@ -358,8 +355,6 @@ class GeofenceApp {
                 if (hasImage) {
                     // *** FIX: ตั้งค่า SRC ให้รูปภาพเริ่มโหลดทันที ***
                     this.announcementImage.src = result.imageUrl.trim(); 
-                    
-                    // ส่วน Logic การเรียก startCloseButtonControl จะไปอยู่ใน Event Listener ของรูปภาพแทน (load/error)
                 } else {
                     this.modalLoader.style.display = 'none'; 
                     this.announcementModalOverlay.classList.remove('initial-show'); 
@@ -375,10 +370,6 @@ class GeofenceApp {
                     this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
                 }
                 
-                // *** FIX: ลบ Timeout/Flow Control เดิมออก เพราะย้ายไปอยู่ใน Event Listener แล้ว ***
-                // ถ้ามีรูปภาพ โค้ดจะรอรูปภาพโหลดเสร็จ (load/error) ก่อนจะเรียก startCloseButtonControl
-                // ถ้าไม่มีรูปภาพ จะเรียก startCloseButtonControl ทันทีใน else block ด้านบน
-
             } else {
                 this.isAnnouncementActive = false; 
                 this.closeAnnouncementModal();
@@ -420,7 +411,7 @@ class GeofenceApp {
             // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
             let remaining = this.announcementControl.countdownSec;
             
-            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก และ DISABLED ปุ่ม
+            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
             this.closeAnnouncementButton.style.display = 'flex'; 
             this.closeAnnouncementButton.disabled = true; // *** FIX: ปิดใช้งานปุ่มขณะนับ ***
             this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
