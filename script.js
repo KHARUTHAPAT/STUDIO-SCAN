@@ -111,7 +111,7 @@ class GeofenceApp {
              // NEW: ลบ .initial-show ออกที่นี่ (เพื่อให้ปุ่มถูกซ่อนก่อน)
              this.announcementModalOverlay.classList.remove('initial-show');
              
-             // เรียกฟังก์ชันควบคุมปุ่มปิด
+             // *** FIX: เรียกฟังก์ชันควบคุมปุ่มและ Flow ต่อไป เมื่อรูปภาพโหลดเสร็จแล้วเท่านั้น ***
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
         });
@@ -125,7 +125,7 @@ class GeofenceApp {
              
              this.announcementImage.style.display = 'none'; 
              
-             // เรียกฟังก์ชันควบคุมปุ่มปิด
+             // *** FIX: เรียกฟังก์ชันควบคุมปุ่มและ Flow ต่อไป เมื่อรูปภาพโหลดล้มเหลวเท่านั้น ***
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
 
@@ -334,6 +334,9 @@ class GeofenceApp {
             }, 50);
         }
 
+        // *** FIX: ตัดการเรียก API get_announcement_image ออกไป
+        // เพื่อให้รูปภาพโหลดเร็วขึ้น โดยให้รูปภาพโหลดโดยตรงผ่าน src และใช้ Event Listener
+        
         try {
             const formData = new FormData();
             formData.append('action', 'get_announcement_image');
@@ -353,7 +356,10 @@ class GeofenceApp {
             if (hasImage || hasButton) {
                 
                 if (hasImage) {
+                    // *** FIX: ตั้งค่า SRC ให้รูปภาพเริ่มโหลดทันที ***
                     this.announcementImage.src = result.imageUrl.trim(); 
+                    
+                    // ส่วน Logic การเรียก startCloseButtonControl จะไปอยู่ใน Event Listener ของรูปภาพแทน (load/error)
                 } else {
                     this.modalLoader.style.display = 'none'; 
                     this.announcementModalOverlay.classList.remove('initial-show'); 
@@ -368,18 +374,11 @@ class GeofenceApp {
                     this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
                     this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
                 }
-
-                const loadTimeout = setTimeout(() => {
-                    const isImageLoading = hasImage && (this.modalLoader.style.display !== 'none' || this.announcementImage.style.display === 'none');
-                    if (isImageLoading) { 
-                        console.warn("Announcement load timeout. Skipping image and calling control flow.");
-                        this.announcementImage.src = ''; 
-                        this.modalLoader.style.display = 'none';
-                        // หาก Time out ให้เรียก startCloseButtonControl
-                        this.startCloseButtonControl(action);
-                    }
-                }, 5000); 
                 
+                // *** FIX: ลบ Timeout/Flow Control เดิมออก เพราะย้ายไปอยู่ใน Event Listener แล้ว ***
+                // ถ้ามีรูปภาพ โค้ดจะรอรูปภาพโหลดเสร็จ (load/error) ก่อนจะเรียก startCloseButtonControl
+                // ถ้าไม่มีรูปภาพ จะเรียก startCloseButtonControl ทันทีใน else block ด้านบน
+
             } else {
                 this.isAnnouncementActive = false; 
                 this.closeAnnouncementModal();
@@ -421,7 +420,7 @@ class GeofenceApp {
             // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
             let remaining = this.announcementControl.countdownSec;
             
-            // NEW: แสดงปุ่มปิด และ DISABLED ปุ่ม
+            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก และ DISABLED ปุ่ม
             this.closeAnnouncementButton.style.display = 'flex'; 
             this.closeAnnouncementButton.disabled = true; // *** FIX: ปิดใช้งานปุ่มขณะนับ ***
             this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
