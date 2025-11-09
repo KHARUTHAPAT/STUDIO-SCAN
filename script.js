@@ -421,8 +421,9 @@ class GeofenceApp {
             // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
             let remaining = this.announcementControl.countdownSec;
             
-            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
+            // NEW: แสดงปุ่มปิด และ DISABLED ปุ่ม
             this.closeAnnouncementButton.style.display = 'flex'; 
+            this.closeAnnouncementButton.disabled = true; // *** FIX: ปิดใช้งานปุ่มขณะนับ ***
             this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
             this.countdownText.style.display = 'block'; // แสดงตัวนับ
 
@@ -436,6 +437,7 @@ class GeofenceApp {
                     
                     this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
                     this.closeIcon.style.display = 'block'; // แสดงกากบาทเมื่อนับเสร็จ
+                    this.closeAnnouncementButton.disabled = false; // *** FIX: เปิดใช้งานปุ่มเมื่อนับเสร็จ ***
                 }
             }, 1000);
             
@@ -444,6 +446,7 @@ class GeofenceApp {
             this.closeAnnouncementButton.style.display = 'flex'; 
             this.closeIcon.style.display = 'block';
             this.countdownText.style.display = 'none';
+            this.closeAnnouncementButton.disabled = false; // *** FIX: เปิดใช้งานปุ่มเมื่อไม่มีการนับ ***
         }
     }
 
@@ -541,7 +544,6 @@ class GeofenceApp {
                 }
                 // *** FIXED: หากโหลด Config ล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
                 if (this.studioName) {
-                    // *** FIX: ใช้ window.location.href = ... เพื่อให้ Child Page ปิด Flow ตัวเอง และกลับไปหน้า Admin Page
                     window.location.href = window.location.origin + window.location.pathname; 
                 }
                 return null;
