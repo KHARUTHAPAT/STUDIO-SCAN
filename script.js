@@ -27,7 +27,7 @@ class GeofenceApp {
 
         // Configuration 
         // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzpSIcV8uwcUXf4xiPQ-VTDiHoMhWZGsl3XJ35qJU6dcooCsC5kouGdMLinVHNGiMES/exec';
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqxAJVdNuARRDychtqKo6KL7zOoqrG3hGD4UhFqgrH0HWtRimILc4DiBgGAzDhM7JI/exec';
         this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
         
         // Geofencing Parameters
@@ -111,7 +111,7 @@ class GeofenceApp {
              // NEW: ลบ .initial-show ออกที่นี่ (เพื่อให้ปุ่มถูกซ่อนก่อน)
              this.announcementModalOverlay.classList.remove('initial-show');
              
-             // *** FIX: เรียกฟังก์ชันควบคุมปุ่มและ Flow ต่อไป เมื่อรูปภาพโหลดเสร็จแล้วเท่านั้น ***
+             // เรียกฟังก์ชันควบคุมปุ่มปิด
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
         });
@@ -125,7 +125,7 @@ class GeofenceApp {
              
              this.announcementImage.style.display = 'none'; 
              
-             // *** FIX: เรียกฟังก์ชันควบคุมปุ่มและ Flow ต่อไป เมื่อรูปภาพโหลดล้มเหลวเท่านั้น ***
+             // เรียกฟังก์ชันควบคุมปุ่มปิด
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
 
@@ -353,7 +353,6 @@ class GeofenceApp {
             if (hasImage || hasButton) {
                 
                 if (hasImage) {
-                    // *** FIX: ตั้งค่า SRC ให้รูปภาพเริ่มโหลดทันที ***
                     this.announcementImage.src = result.imageUrl.trim(); 
                 } else {
                     this.modalLoader.style.display = 'none'; 
@@ -369,6 +368,17 @@ class GeofenceApp {
                     this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
                     this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
                 }
+
+                const loadTimeout = setTimeout(() => {
+                    const isImageLoading = hasImage && (this.modalLoader.style.display !== 'none' || this.announcementImage.style.display === 'none');
+                    if (isImageLoading) { 
+                        console.warn("Announcement load timeout. Skipping image and calling control flow.");
+                        this.announcementImage.src = ''; 
+                        this.modalLoader.style.display = 'none';
+                        // หาก Time out ให้เรียก startCloseButtonControl
+                        this.startCloseButtonControl(action);
+                    }
+                }, 5000); 
                 
             } else {
                 this.isAnnouncementActive = false; 
@@ -413,7 +423,6 @@ class GeofenceApp {
             
             // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
             this.closeAnnouncementButton.style.display = 'flex'; 
-            this.closeAnnouncementButton.disabled = true; // *** FIX: ปิดใช้งานปุ่มขณะนับ ***
             this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
             this.countdownText.style.display = 'block'; // แสดงตัวนับ
 
@@ -427,7 +436,6 @@ class GeofenceApp {
                     
                     this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
                     this.closeIcon.style.display = 'block'; // แสดงกากบาทเมื่อนับเสร็จ
-                    this.closeAnnouncementButton.disabled = false; // *** FIX: เปิดใช้งานปุ่มเมื่อนับเสร็จ ***
                 }
             }, 1000);
             
@@ -436,7 +444,6 @@ class GeofenceApp {
             this.closeAnnouncementButton.style.display = 'flex'; 
             this.closeIcon.style.display = 'block';
             this.countdownText.style.display = 'none';
-            this.closeAnnouncementButton.disabled = false; // *** FIX: เปิดใช้งานปุ่มเมื่อไม่มีการนับ ***
         }
     }
 
@@ -534,6 +541,7 @@ class GeofenceApp {
                 }
                 // *** FIXED: หากโหลด Config ล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
                 if (this.studioName) {
+                    // *** FIX: ใช้ window.location.href = ... เพื่อให้ Child Page ปิด Flow ตัวเอง และกลับไปหน้า Admin Page
                     window.location.href = window.location.origin + window.location.pathname; 
                 }
                 return null;
