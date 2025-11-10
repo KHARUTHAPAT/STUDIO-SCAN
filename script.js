@@ -94,8 +94,6 @@ class GeofenceApp {
         this.mainMenuCard.style.display = 'none';
         this.mainContainerWrapper.style.display = 'none'; 
         
-        this.pageTitle.textContent = 'ประกาศ'; 
-        
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
         document.body.style.backgroundColor = '#f8fafc';
@@ -783,8 +781,8 @@ class GeofenceApp {
         
         let hasGeofenceControl = false;
 
-        // 🔴 FIX: ถ้าเป็น 'main_menu' ให้ถือว่าไม่มีเกณฑ์ (ปิด Modal ทันที)
-        if (action === 'main_menu') {
+        // 🔴 FIX: ถ้าเป็น 'main_menu' หรือไม่มี studioEntry ให้ถือว่าไม่มีเกณฑ์ แต่ต้องบังคับให้กดกากบาท
+        if (action === 'main_menu' || !studioEntry) {
             hasGeofenceControl = false; 
         } else if (studioEntry) {
             hasGeofenceControl = studioEntry.hideCloseBtn || studioEntry.countdownSec > 0;
@@ -792,8 +790,15 @@ class GeofenceApp {
         
         
         if (!hasGeofenceControl) {
-            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E (สำหรับหน้า Studio) หรือเป็นหน้า Main Menu ให้ปิด Modal ทันที
-            this.closeAnnouncementModal();
+            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E (สำหรับหน้า Studio) หรือเป็นหน้า Main Menu
+            // ให้แสดงปุ่มปิด Modal ทันทีและบังคับให้ผู้ใช้กด
+            
+            this.closeAnnouncementButton.style.display = 'flex'; // 🔴 บังคับแสดงปุ่มกากบาท
+            this.closeIcon.style.display = 'block';
+            this.countdownText.style.display = 'none';
+            this.closeAnnouncementButton.style.pointerEvents = 'auto'; // เปิดใช้งานปกติ
+            
+            // ไม่ต้องทำอะไรต่อ (รอผู้ใช้กด)
             return;
         }
 
