@@ -456,7 +456,7 @@ class GeofenceApp {
             this.fetchAnnouncementConfigFromSheet()
         ]);
         
-        this.studioData = studioList;
+        this.studioData = list;
         this.geofenceConfig = geofenceConfig;
         this.announcementConfig = announcementConfig;
     }
@@ -964,7 +964,7 @@ class GeofenceApp {
         this.statusMessage.textContent = message;
         
         if (type === 'loading') {
-            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle></svg>';
+            this.statusIconContainer.innerHTML = '<div class="circle-loader-spin"></div>';
             this.retryButton.style.display = 'none';
         } else if (type === 'error') {
             this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
