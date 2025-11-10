@@ -1,4 +1,4 @@
-// Geofencing and Announcement Logic
+// Geofencing and Announcement Logic (Using Google Sheets API v4)
 class GeofenceApp {
     constructor() {
         // UI Elements
@@ -25,45 +25,51 @@ class GeofenceApp {
         this.announcementActionArea = document.getElementById('announcementActionArea');
         this.announcementActionButton = document.getElementById('announcementActionButton');
 
-        // Configuration 
-        // URL Apps Script ล่าสุดของคุณ (อัปเดตแล้ว)
-        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqxAJVdNuARRDychtqKo6KL7zOoqrG3hGD4UhFqgrH0HWtRimILc4DiBgGAzDhM7JI/exec';
-        this.ANNOUNCEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit?gid=0#gid=0';
+        // =================================================================
+        // *** 🔴 NEW: CONFIGURATION FOR GOOGLE SHEETS API V4 🔴 ***
+        // =================================================================
+        // API Key ที่ผู้ใช้ให้มา
+        this.API_KEY = 'AIzaSyBivFhVOiCJdpVF4xNb7vYRNJLxLj60Rk0'; 
+        // Sheet ID จาก URL เดิม: 'https://docs.google.com/spreadsheets/d/1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q/edit'
+        this.SHEET_ID = '1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q'; 
+        
+        // Web App URL สำหรับ Announcement (ยังคงต้องใช้ Apps Script)
+        this.WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqxAJVdNuARRDychtqKo6KL7zOoqrG3hGD4UhFqgrH0HWtRimILc4DiBgGAzDhM7JI/exec'; 
+        
+        this.STUDIO_SHEET_NAME = 'Studio'; 
+        this.CONFIG_SHEET_NAME = 'รวมข้อมูล'; 
         
         // Geofencing Parameters
         this.params = new URLSearchParams(window.location.search);
         this.studioName = this.params.get('studio');
+        
+        this.studioData = {}; 
+        this.geofenceConfig = {}; 
         
         this.target = { lat: null, lon: null, dist: null, url: null };
 
         this.isBypassMode = false;
         this.bypassUrl = null; 
         
-        // NEW: ตัวแปรสำหรับควบคุม Announcement
         this.announcementControl = {
-            hideCloseBtn: false, // D: 1=ซ่อนปุ่มกากบาท
-            countdownSec: 0 // E: วินาทีนับถอยหลังก่อนแสดงปุ่มกากบาท
+            hideCloseBtn: false,
+            countdownSec: 0
         };
-        this.isAnnouncementActive = false; // NEW: สถานะ Modal ปัจจุบัน
-        this.countdownInterval = null; // NEW: ตัวแปรเก็บ Interval สำหรับนับถอยหลัง
+        this.isAnnouncementActive = false;
+        this.countdownInterval = null;
 
-        // *** FIXED: ซ่อนทุกอย่างที่เกี่ยวกับหน้าหลักไว้ตั้งแต่เริ่มต้น ***
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'none';
         this.mainContainerWrapper.style.display = 'none'; 
         
-        this.pageTitle.textContent = 'ประกาศ'; // ชื่อหน้า: แสดง "ประกาศ"
+        this.pageTitle.textContent = 'ประกาศ'; 
         
-        // *** FIX: ซ่อนปุ่มกากบาทไว้ตั้งแต่แรก (ใช้ JS/CSS เพื่อแสดงผล) ***
         this.closeAnnouncementButton.style.display = 'none'; 
         
-        // *** FIXED: บังคับให้ Body เป็น Light Mode (พื้นหลังขาว) เสมอ ***
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
-        document.body.style.backgroundColor = '#f8fafc'; // สีขาวตาม Light Mode CSS
-        // -----------------------------------------------------------
-
-        // *** แก้ไข: เพิ่มการจัดการ body overflow สำหรับ Menu/Checker ***
+        document.body.style.backgroundColor = '#f8fafc';
+        
         document.body.style.overflow = 'hidden'; 
         // -----------------------------------------------------------
 
@@ -73,20 +79,24 @@ class GeofenceApp {
     init() {
         this.bindEvents();
         
-        // 1. ถ้ามี studioName (จากการรีเฟรชลิงก์แต่ละปุ่ม) ต้องเข้าสู่ flow Studio
-        if (this.studioName) {
-            // Action หลังปิดประกาศ: 'geofence_check' (เพื่อบังคับให้ไป checkGeolocation ทันที)
-            this.loadStudioConfigAndAnnouncement('geofence_check');
-        } else {
-            // 2. ถ้าไม่มี studioName ให้แสดง Menu หลัก (Initial Load: Admin Mode)
-            
-            // Action หลังปิดประกาศ: 'main_menu' (เพื่อไป showMainMenu)
-            const initialAction = 'main_menu';
-            // NEW: กำหนดให้เป็นค่าควบคุมปกติ (แสดงปุ่มกากบาททันที)
-            const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
-            
-            this.loadAnnouncement(initialAction, true, initialControl); 
-        }
+        // 1. โหลด Studio List และ Geofence Config ทั้งหมดก่อน
+        this.loadInitialConfig().then(() => {
+             if (this.studioName) {
+                 // Action หลังปิดประกาศ: 'geofence_check'
+                 this.loadStudioFlow('geofence_check');
+             } else {
+                 // Action หลังปิดประกาศ: 'main_menu'
+                 const initialAction = 'main_menu';
+                 const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
+                 
+                 // ประกาศสำหรับ Admin Mode ยังใช้ Apps Script
+                 this.loadAnnouncement(initialAction, true, initialControl); 
+             }
+        }).catch(error => {
+            console.error("Fatal Error during initial config load:", error);
+            // แสดงข้อความผิดพลาดที่หน้าจอถ้าโหลดไม่สำเร็จ
+            this.showErrorScreen(`ไม่สามารถโหลดข้อมูลเริ่มต้นได้: ${error.message}`);
+        });
     }
     
     _onAnnouncementButtonClick = (event) => {
@@ -108,10 +118,8 @@ class GeofenceApp {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
              
-             // NEW: ลบ .initial-show ออกที่นี่ (เพื่อให้ปุ่มถูกซ่อนก่อน)
              this.announcementModalOverlay.classList.remove('initial-show');
              
-             // เรียกฟังก์ชันควบคุมปุ่มปิด
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
         });
@@ -120,16 +128,13 @@ class GeofenceApp {
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
              
-             // NEW: ลบ .initial-show ออกที่นี่
              this.announcementModalOverlay.classList.remove('initial-show');
              
              this.announcementImage.style.display = 'none'; 
              
-             // เรียกฟังก์ชันควบคุมปุ่มปิด
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
 
-             // หากไม่มีปุ่ม Action ให้ปิด Modal เลย (สำหรับกรณีที่ไม่มีทั้งรูปและปุ่ม)
              if (this.announcementActionArea.style.display === 'none' && !this.announcementImage.src) {
                  this.isAnnouncementActive = false;
                  this.closeAnnouncementModal(); 
@@ -137,42 +142,143 @@ class GeofenceApp {
              console.error("Announcement Image failed to load or permission denied.");
         });
     }
+
+    // =================================================================
+    // *** 🟢 GOOGLE SHEETS API V4 FETCHERS 🟢 ***
+    // =================================================================
+    
+    // ดึงค่าทั้งหมดจากชีต Studio
+    async fetchStudioListFromSheet() {
+        // Range: Studio!A:E
+        const range = `${this.STUDIO_SHEET_NAME}!A:E`;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
+            
+            const list = {};
+            const values = data.values || [];
+            
+            // Loop ข้ามแถว Header (เริ่มต้นที่ i=0)
+            for (let i = 0; i < values.length; i++) {
+                const row = values[i];
+                const name = row[0] ? row[0].toString().trim() : '';
+                const url = row[1] ? row[1].toString().trim() : '';
+                const checkCondition = row[2];
+                const hideCloseBtn = (row[3] == 1 || row[3] === '1');
+                let countdownSec = parseInt(row[4]);
+                
+                if (isNaN(countdownSec) || countdownSec < 0) {
+                    countdownSec = 0;
+                }
+                
+                if (name && url) {
+                    const requiresGeofence = (checkCondition == 1 || checkCondition === '1');
+                    
+                    list[name] = {
+                        url: url,
+                        check: requiresGeofence,
+                        hideCloseBtn: hideCloseBtn, 
+                        countdownSec: countdownSec 
+                    };
+                }
+            }
+            return list;
+        } catch (error) {
+            console.error('Error fetching Studio List:', error);
+            throw new Error(`Failed to fetch studio list from Google Sheet: ${error.message}`);
+        }
+    }
+    
+    // ดึงค่า Geofence Config (K1:K3)
+    async fetchGeofenceConfigFromSheet() {
+        // Range: รวมข้อมูล!K1:K3
+        const range = `${this.CONFIG_SHEET_NAME}!K1:K3`;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
+            
+            const values = data.values || [];
+            if (values.length < 3) {
+                 throw new Error("Missing values for Geofence config (K1:K3).");
+            }
+            
+            const lat = parseFloat(values[0][0]);
+            const lon = parseFloat(values[1][0]);
+            const radiusMeters = parseFloat(values[2][0]);
+
+            if (isNaN(lat) || isNaN(lon) || isNaN(radiusMeters) || radiusMeters <= 0) {
+                 throw new Error("Invalid Geofence configuration values (K1, K2, K3).");
+            }
+            
+            return {
+                lat: lat,
+                lon: lon,
+                dist: radiusMeters / 1000 // แปลงเป็นกิโลเมตร
+            };
+        } catch (error) {
+            console.error('Error fetching Geofence Config:', error);
+            throw new Error(`Failed to fetch Geofence config from Google Sheet: ${error.message}`);
+        }
+    }
+
+    // ดึงข้อมูลหลักทั้งหมด (Studio List และ Geofence Config)
+    async loadInitialConfig() {
+        const [studioList, geofenceConfig] = await Promise.all([
+            this.fetchStudioListFromSheet(),
+            this.fetchGeofenceConfigFromSheet()
+        ]);
+        
+        this.studioData = studioList;
+        this.geofenceConfig = geofenceConfig;
+    }
     
     // --- App Flow Control ---
 
-    // NEW FUNCTION: จัดการ Flow สำหรับ Studio
-    async loadStudioConfigAndAnnouncement(action) {
-        // 1. ดึงค่า config จาก Apps Script (รวมถึง D และ E)
-        const configResult = await this.fetchGeofenceConfig(true); 
-
-        // 2. ตั้งค่า Announcement Control 
-        if (configResult && configResult.announcementControl) {
-            this.announcementControl = configResult.announcementControl;
-            
-            // NEW: ต้องดึง config พื้นฐานมาด้วย (สำหรับ Geofence Check/Bypass)
-            this.target.lat = configResult.targetLat;
-            this.target.lon = configResult.targetLon;
-            this.target.dist = configResult.maxDist;
-            this.target.url = configResult.formUrl;
-            this.isBypassMode = configResult.needsCheck === false;
-            this.bypassUrl = configResult.formUrl;
-
-        } else {
-            this.announcementControl = { hideCloseBtn: false, countdownSec: 0 }; 
-            if (action === 'geofence_check') {
-                alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
-                window.location.href = window.location.origin + window.location.pathname; 
-                return;
-            }
+    // NEW FUNCTION: จัดการ Flow สำหรับ Studio (ใช้ข้อมูลที่โหลดมาแล้ว)
+    async loadStudioFlow(action) {
+        
+        const studioEntry = this.studioData[this.studioName];
+        
+        if (!studioEntry) {
+            alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
+            window.location.href = window.location.origin + window.location.pathname; 
+            return;
         }
         
-        // 3. ตรวจสอบ Bypass Mode ทันที (ก่อนแสดงประกาศ)
+        // 1. ตั้งค่า Announcement Control จากข้อมูล Studio
+        this.announcementControl = {
+             hideCloseBtn: studioEntry.hideCloseBtn,
+             countdownSec: studioEntry.countdownSec
+        };
+        
+        // 2. กำหนด Target สำหรับ Geofence/Bypass
+        this.target.url = studioEntry.url;
+        this.isBypassMode = studioEntry.check === false;
+
         if (this.isBypassMode) {
              // ถ้าเป็น Bypass Mode ให้ตั้งค่า Action เป็น Redirect
              action = 'bypass_redirect';
+             this.bypassUrl = studioEntry.url;
+        } else {
+             // ถ้าต้อง Check Geofence ให้ใช้ Config ที่โหลดมาจากชีต 'รวมข้อมูล'
+             this.target.lat = this.geofenceConfig.lat;
+             this.target.lon = this.geofenceConfig.lon;
+             this.target.dist = this.geofenceConfig.dist;
         }
         
-        // 4. โหลดประกาศด้วยค่าควบคุมที่ถูกต้อง (แสดงประกาศแค่ 1 ครั้ง)
+        // 3. โหลดประกาศด้วยค่าควบคุมที่ถูกต้อง
         this.loadAnnouncement(action, true, this.announcementControl); 
     }
     
@@ -185,77 +291,45 @@ class GeofenceApp {
     // --- UI/Mode Handlers ---
 
     showMainMenu() {
-        // *** แก้ไข: บังคับให้เป็น Light Mode เมื่อเข้าสู่หน้าเมนูหลัก ***
         document.body.classList.add('light-mode'); 
         document.body.classList.remove('dark-mode'); 
         document.body.style.backgroundColor = '#f8fafc'; 
-        // -----------------------------------------------------------
         
-        this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
+        this.mainContainerWrapper.style.display = 'flex'; 
         this.geofenceChecker.style.display = 'none';
         this.mainMenuCard.style.display = 'flex';
         
-        // *** แก้ไข: ทำให้หน้าเมนูสามารถเลื่อนได้และจัดชิดบน ***
         document.body.style.overflow = 'auto'; 
         document.body.classList.add('menu-scrollable');
         
-        // NEW: บังคับให้ Menu Card (login-container/status-card) เริ่มต้นที่ขอบบน
         this.mainMenuCard.style.marginTop = '0';
         document.getElementById('mainContainerWrapper').style.marginTop = '0';
         
-        // *** แก้ไขชื่อหน้าเมื่อเข้าสู่เมนูหลัก ***
         this.pageTitle.textContent = 'เมนู Studio'; 
         document.getElementById('menuTitle').textContent = 'เมนู Studio'; 
         document.getElementById('mainMenuCard').querySelector('p').textContent = 'เลือก Studio ที่ต้องการเข้าถึง';
-        // -------------------------------------------------
 
-        this.fetchStudioNamesAndSetupMenu();
+        // ใช้ข้อมูลที่โหลดมาแล้วในการสร้างปุ่ม
+        this.setupMenuButtons(Object.keys(this.studioData));
     }
 
     showGeofenceChecker() {
-        // *** แก้ไข: บังคับให้เป็น Light Mode/พื้นหลังขาว เมื่อเข้าสู่หน้า Geofence Checker ***
         document.body.classList.add('light-mode'); 
         document.body.classList.remove('dark-mode'); 
         document.body.style.backgroundColor = '#f8fafc'; 
-        // -----------------------------------------------------------
         
-        this.mainContainerWrapper.style.display = 'flex'; // NEW: แสดง container หลัก
+        this.mainContainerWrapper.style.display = 'flex'; 
         this.mainMenuCard.style.display = 'none';
         this.geofenceChecker.style.display = 'flex';
         this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
 
-        // *** แก้ไข: ล็อคหน้าจอไม่ให้เลื่อนเมื่อเข้าสู่ Geofence Checker (ลบ Class และรีเซ็ต margin) ***
         document.body.style.overflow = 'hidden'; 
         document.body.classList.remove('menu-scrollable');
         this.mainMenuCard.style.marginTop = '';
         document.getElementById('mainContainerWrapper').style.marginTop = '';
-        // ----------------------------------------------------------------------------
     }
     
-    async fetchStudioNamesAndSetupMenu() {
-        try {
-            const formData = new FormData();
-            formData.append('action', 'get_studio_list');
-
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData 
-            });
-            
-            const result = await response.json();
-            
-            if (result.success && result.studioNames && result.studioNames.length > 0) {
-                this.setupMenuButtons(result.studioNames);
-            } else {
-                this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">ไม่สามารถโหลดรายการ Studio ได้ (โปรดตรวจสอบชีต \'Studio\' และสิทธิ์การเข้าถึง)</p>';
-                console.error("No studio names returned or failed to fetch.");
-            }
-
-        } catch (error) {
-            this.menuButtonsContainer.innerHTML = '<p style="color:#ef4444; text-align: center;">การเชื่อมต่อ API ล้มเหลว</p>';
-            console.error("Failed to fetch studio list:", error);
-        }
-    }
+    // ลบ fetchStudioNamesAndSetupMenu ออก
 
     setupMenuButtons(studioNames) {
         this.menuButtonsContainer.innerHTML = ''; 
@@ -272,7 +346,6 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // *** FIX: เปิดหน้าต่างใหม่ไปยังลิงก์ Studio ***
                 const url = `?studio=${encodeURIComponent(name)}`;
                 window.open(window.location.origin + window.location.pathname + url, '_blank'); 
             });
@@ -283,28 +356,22 @@ class GeofenceApp {
 
     // --- Announcement Logic (พร้อม Timeout) ---
 
-    // control: { hideCloseBtn: boolean, countdownSec: number }
     async loadAnnouncement(action, isInitialLoad = false, control = null) {
         
-        // หากมีการส่งค่า control มาให้ใช้เลย (สำหรับ Initial Load)
         if (control) {
              this.announcementControl = control;
         }
 
         if (!this.announcementModalOverlay) {
-             // หากไม่มี Modal ให้ไปต่อทันที (กรณีนี้ไม่ควรเกิดขึ้น)
              this.startCloseButtonControl(action);
              return;
         }
         
         this.isAnnouncementActive = true; 
-        // *** NEW: ซ่อนปุ่มทั้งหมดไว้ตั้งแต่แรก เพื่อรอ Logic ใน startCloseButtonControl ***
         this.closeAnnouncementButton.style.display = 'none'; 
         this.countdownText.style.display = 'none'; 
         this.closeIcon.style.display = 'none';
-        // --------------------------------------------------------------------------
 
-        // เคลียร์ Interval เก่าก่อนเริ่ม
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
             this.countdownInterval = null;
@@ -321,7 +388,6 @@ class GeofenceApp {
         this.announcementModalOverlay.setAttribute('data-post-action', action);
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
         
-        // NEW: กำหนดให้ Modal ต้องแสดงก่อนเริ่มโหลด API เพื่อให้ .initial-show ทำงาน
         if (isInitialLoad) {
             this.announcementModalOverlay.style.display = 'flex'; 
             this.modalLoader.style.display = 'flex';
@@ -335,9 +401,11 @@ class GeofenceApp {
         }
 
         try {
+            // โหลด Announcement ผ่าน Apps Script (เพราะจัดการรูปภาพได้ง่ายกว่า)
             const formData = new FormData();
             formData.append('action', 'get_announcement_image');
-            formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
+            // ไม่ต้องใช้ ANNOUNCEMENT_SHEET_URL เพราะถูกกำหนดใน Apps Script แล้ว
+            // formData.append('sheetUrl', this.ANNOUNCEMENT_SHEET_URL); 
 
             const response = await fetch(this.WEB_APP_URL, {
                 method: 'POST',
@@ -349,7 +417,6 @@ class GeofenceApp {
             const hasImage = result.success && result.imageUrl && result.imageUrl.trim() !== '';
             const hasButton = result.success && result.buttonText && result.buttonUrl; 
 
-            // ประกาศจะไม่หายเองอัตโนมัติอีกต่อไป
             if (hasImage || hasButton) {
                 
                 if (hasImage) {
@@ -357,7 +424,6 @@ class GeofenceApp {
                 } else {
                     this.modalLoader.style.display = 'none'; 
                     this.announcementModalOverlay.classList.remove('initial-show'); 
-                    // หากไม่มีภาพ ให้เรียก startCloseButtonControl ทันที
                     this.startCloseButtonControl(action); 
                 }
                 
@@ -375,9 +441,9 @@ class GeofenceApp {
                         console.warn("Announcement load timeout. Skipping image and calling control flow.");
                         this.announcementImage.src = ''; 
                         this.modalLoader.style.display = 'none';
-                        // หาก Time out ให้เรียก startCloseButtonControl
                         this.startCloseButtonControl(action);
                     }
+                    clearTimeout(loadTimeout);
                 }, 5000); 
                 
             } else {
@@ -394,7 +460,6 @@ class GeofenceApp {
     // ฟังก์ชันสำหรับควบคุมการแสดงปุ่มปิดและนับถอยหลัง (D และ E)
     startCloseButtonControl(action) {
         if (!this.announcementModalOverlay) {
-             // ถ้า Modal ไม่มีอยู่ ให้ทำตาม Action ที่ได้รับมา
              if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
              else if (action === 'bypass_redirect') { window.open(this.bypassUrl, '_self'); } 
              else { this.continueAppFlow(); }
@@ -404,43 +469,38 @@ class GeofenceApp {
         this.announcementModalOverlay.setAttribute('data-post-action', action);
         
         if (!this.isAnnouncementActive) {
-            // Modal ปิดไปแล้ว/ไม่มีเนื้อหา ให้ทำตาม Action ที่ได้รับมา
              if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
              else if (action === 'bypass_redirect') { window.open(this.bypassUrl, '_self'); } 
              else { this.continueAppFlow(); }
              return;
         }
         
-        // 1. ตรวจสอบเงื่อนไขซ่อนปุ่มปิด (D=1)
         if (this.announcementControl.hideCloseBtn) {
             this.closeAnnouncementButton.style.display = 'none';
             this.countdownText.style.display = 'none';
             this.closeIcon.style.display = 'none';
             
         } else if (this.announcementControl.countdownSec > 0) {
-            // 2. ตรวจสอบเงื่อนไขนับถอยหลัง (E > 0)
             let remaining = this.announcementControl.countdownSec;
             
-            // NEW: แสดงปุ่มปิด แต่ซ่อนกากบาท/แสดงตัวนับตั้งแต่แรก
             this.closeAnnouncementButton.style.display = 'flex'; 
-            this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
-            this.countdownText.style.display = 'block'; // แสดงตัวนับ
+            this.closeIcon.style.display = 'none'; 
+            this.countdownText.style.display = 'block'; 
 
             this.countdownInterval = setInterval(() => {
-                this.countdownText.textContent = remaining; // แสดงตัวเลขปัจจุบัน
+                this.countdownText.textContent = remaining; 
                 remaining--;
 
                 if (remaining < 0) {
                     clearInterval(this.countdownInterval);
                     this.countdownInterval = null;
                     
-                    this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
-                    this.closeIcon.style.display = 'block'; // แสดงกากบาทเมื่อนับเสร็จ
+                    this.countdownText.style.display = 'none'; 
+                    this.closeIcon.style.display = 'block'; 
                 }
             }, 1000);
             
         } else {
-            // 3. เงื่อนไขปกติ (ไม่มี D/E หรือ D=0, E=0)
             this.closeAnnouncementButton.style.display = 'flex'; 
             this.closeIcon.style.display = 'block';
             this.countdownText.style.display = 'none';
@@ -453,7 +513,6 @@ class GeofenceApp {
         
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
         
-        // เคลียร์ Interval
         if (this.countdownInterval) {
             clearInterval(this.countdownInterval);
             this.countdownInterval = null;
@@ -464,17 +523,14 @@ class GeofenceApp {
         
         setTimeout(() => {
             this.announcementModalOverlay.style.display = 'none';
-            this.countdownText.style.display = 'none'; // ซ่อนตัวนับ
+            this.countdownText.style.display = 'none'; 
             
             if (postAction === 'bypass_redirect' && this.bypassUrl) {
-                // Flow 1: ประกาศ -> Redirect (เมื่อผ่าน Geofence หรือเป็น Bypass)
                 window.open(this.bypassUrl, '_self'); 
             } else if (postAction === 'geofence_check') {
-                // Flow 2: ประกาศ -> ตรวจสอบพิกัด (เมื่อเข้า Studio ครั้งแรก/รีเฟรช)
                 this.showGeofenceChecker();
                 this.checkGeolocation();
             } else if (postAction === 'main_menu') {
-                 // Flow 3: ประกาศ (Admin) -> เมนูหลัก
                  this.continueAppFlow();
             }
         }, 300); 
@@ -482,86 +538,11 @@ class GeofenceApp {
 
     // --- Geofencing Logic ---
 
-    // แก้ไข: เพิ่ม isPreload flag และเปลี่ยนให้ return result แทนการเรียกฟังก์ชันอื่น
-    async fetchGeofenceConfig(isPreload = false) {
-        if (!this.studioName) {
-            this.continueAppFlow(); 
-            return null;
-        }
-        
-        if (!isPreload) {
-             // *** FIX: เมื่อเข้าหน้า Geofence Checker ให้กลับไปใช้ Light Mode ***
-             this.showGeofenceChecker(); 
-             this.updateStatus('loading', `กำลังโหลดข้อมูล ${this.studioName}...`, 'กำลังติดต่อเซิร์ฟเวอร์เพื่อดึงพิกัดที่ถูกต้อง');
-        }
-
-        const formData = new FormData();
-        formData.append('action', 'get_geofence_config');
-        formData.append('studio', this.studioName);
-
-        try {
-            const response = await fetch(this.WEB_APP_URL, {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                if (isPreload) {
-                   return result; // คืนค่าทั้งหมดเมื่อเป็น Preload (เพื่อดึง D/E)
-                }
-                
-                // --- โหมดการประมวลผลหลัง Preload (ถ้าไม่ Preload จะรันต่อที่นี่) ---
-                this.announcementControl = result.announcementControl || { hideCloseBtn: false, countdownSec: 0 };
-                
-                if (result.needsCheck === false) {
-                    this.geofenceChecker.style.display = 'none'; 
-                    this.isBypassMode = true; 
-                    this.bypassUrl = result.formUrl;
-                    
-                    // ประกาศรอบที่ 2 (Bypass Mode) -> Redirect 
-                    this.loadAnnouncement('bypass_redirect', false, this.announcementControl); 
-                    return result; 
-                }
-                
-                // Geofence Check Required
-                this.target.lat = result.targetLat;
-                this.target.lon = result.targetLon;
-                this.target.dist = result.maxDist;
-                this.target.url = result.formUrl;
-                
-                // เริ่มเช็คพิกัด
-                this.checkGeolocation(); 
-                return result;
-                
-            } else {
-                if (!isPreload) {
-                   this.updateStatus('error', 'เกิดข้อผิดพลาด', result.message || 'ไม่สามารถดึงข้อมูลพิกัดจากเซิร์ฟเวอร์');
-                }
-                // *** FIXED: หากโหลด Config ล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
-                if (this.studioName) {
-                    // *** FIX: ใช้ window.location.href = ... เพื่อให้ Child Page ปิด Flow ตัวเอง และกลับไปหน้า Admin Page
-                    window.location.href = window.location.origin + window.location.pathname; 
-                }
-                return null;
-            }
-        } catch (error) {
-            if (!isPreload) {
-                this.updateStatus('error', 'การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อกับ Web App ได้');
-            }
-            // *** FIXED: หากเชื่อมต่อล้มเหลวใน Child Page ให้ Redirect กลับไป Admin Page ***
-            if (this.studioName) {
-                window.location.href = window.location.origin + window.location.pathname; 
-            }
-            return null;
-        }
-    }
-
     checkGeolocation() {
+        // ใช้ this.target ที่ตั้งค่าไว้จาก loadStudioFlow()
         if (this.target.lat === null) {
-             // NEW: ใช้ fetchGeofenceConfig แบบไม่ Preload เพื่อเข้า Flow การตรวจสอบ
-             this.fetchGeofenceConfig(false); 
+             this.updateStatus('error', 'การตั้งค่า Geofence ผิดพลาด', 'ไม่พบพิกัดเป้าหมาย (โปรดตรวจสอบ K1-K3)');
+             this.retryButton.style.display = 'flex';
              return;
         }
         
@@ -588,7 +569,6 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             setTimeout(() => {
-                 // *** FIXED: Redirect ไป URL ปลายทางทันที (ลบการเรียก Modal ซ้ำ) ***
                  window.open(this.target.url, '_self'); 
             }, 1000);
 
@@ -644,6 +624,16 @@ class GeofenceApp {
             this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
             this.retryButton.style.display = 'none';
         }
+    }
+    
+    // NEW: ฟังก์ชันแสดงจอข้อผิดพลาดร้ายแรง
+    showErrorScreen(message) {
+         document.body.style.overflow = 'auto'; 
+         this.geofenceChecker.style.display = 'flex';
+         this.mainContainerWrapper.style.display = 'flex';
+         this.mainMenuCard.style.display = 'none';
+         this.updateStatus('error', 'ข้อผิดพลาดร้ายแรง', message);
+         this.retryButton.style.display = 'none';
     }
 }
 
