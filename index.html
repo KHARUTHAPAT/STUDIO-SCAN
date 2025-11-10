@@ -56,8 +56,6 @@
              margin-bottom: 0px; /* 🔴 FIX: ลบระยะห่างด้านล่าง Text/Line */
         }
         
-        /* 🔴 REMOVED: ลบ CSS สำหรับ .text-loader-line และ @keyframes lineGrow ออกจากไฟล์นี้แล้ว */
-        
         /* ---------------------------------------------------- */
         
         /* ============================================== */
@@ -205,8 +203,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 🔴 FIX: ซ่อนปุ่มกากบาทด้วย CSS ตั้งแต่เริ่มต้น */
-            display: none !important; 
+            /* 🔴 REVERTED: ลบ display: none !important; ออก */
         }
         .modal-close-button:hover {
             background: #fff;
@@ -437,7 +434,7 @@
     <div class="neural-modal-overlay initial-show" id="announcementModalOverlay" style="display:flex;">
         <div class="login-card neural-modal-content">
             <div class="ai-glow"></div>
-            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement" style="display:none;">
+            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
                 <span id="countdownText"></span>
                 <span class="close-icon">&times;</span> 
             </button>
@@ -447,7 +444,7 @@
             <div id="modalLoader" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
                 <div class="circle-loader-spin"></div>
                 <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
-                </div>
+            </div>
             
             <div class="modal-body">
                 <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
