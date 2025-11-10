@@ -41,8 +41,8 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* --- Text Loader (สำหรับ Modal ประกาศ 10s Timeout) --- */
-        /* 🔴 NEW: Text Loader - ใช้โครงสร้างที่คุณให้มา */
+        /* --- Text Loader (สำหรับ Modal ประกาศ 20s Timeout) --- */
+        /* 🔴 REVERTED/UPDATED: ใช้โครงสร้างเดิมและปรับ 20s */
         .text-loader-container {
             position: relative;
             display: inline-block;
@@ -58,30 +58,20 @@
              padding-bottom: 5px; /* เว้นระยะสำหรับเส้นข้างล่าง */
              position: relative;
              overflow: hidden;
+             margin-top: 15px; /* เว้นระยะจาก circle loader */
+             text-align: center;
+             margin-bottom: 20px; /* 🔴 FIX: เพิ่มระยะห่างด้านล่าง Text/Line */
         }
         
-        /* 🔴 NEW CSS: Text Loader Bar (10s) 🔴 */
-        .text-loader {
-            font-size: 0.95rem; /* ปรับขนาดให้เข้ากับ modalLoaderText */
-            font-weight: 500;
-            position: relative;
-            display: inline-block;
-            padding-bottom: 5px;
-            overflow: hidden;
-            color: #f8fafc; /* ใช้สีขาวตาม Theme */
-            margin-top: 10px; /* เว้นระยะจาก circle loader */
-            text-align: center;
-        }
-
-        .text-loader:after {
-            content: '';
+        /* 🔴 NEW/UPDATED: Text Loader Line (ถูกเรียกโดย JS) */
+        .text-loader-line {
             height: 3px;
             width: 100%;
-            background: #3b82f6; /* ใช้สีฟ้าตาม Brand */
+            background: #3b82f6; /* สีฟ้าตาม Brand */
             transform: scaleX(0);
             transform-origin: left;
             display: block;
-            animation: lineGrow 10s linear infinite; /* ใช้เวลา 10 วินาที */
+            animation: lineGrow 20s linear infinite; /* 🔴 แก้ไข: 10s -> 20s */
             position: absolute;
             bottom: 0;
             left: 0;
@@ -290,19 +280,6 @@
             align-items: center;
         }
         
-        /* 🔴 NEW: Text สำหรับนับถอยหลังโหลด (ถูกรวมเข้ากับ .text-loader) */
-        /*
-        #modalLoaderText {
-             color: #f8fafc;
-             font-size: 0.95rem;
-             margin-top: 15px;
-             text-align: center;
-             font-weight: 500;
-             padding-bottom: 5px;
-             position: relative;
-        }
-        */
-
         /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
         #announcementActionArea {
             padding: 2px 32px 0px !important; 
@@ -486,7 +463,8 @@
             
             <div id="modalLoader" style="position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
                 <div class="circle-loader-spin"></div>
-                <span class="text-loader" id="modalLoaderText">กำลังโหลด</span>
+                <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
+                <div id="textLoaderLine" style="display:none;" class="text-loader-line"></div>
                 </div>
             
             <div class="modal-body">
