@@ -205,6 +205,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            /* 🔴 FIX: ซ่อนปุ่มกากบาทด้วย CSS ตั้งแต่เริ่มต้น */
+            display: none !important; 
         }
         .modal-close-button:hover {
             background: #fff;
@@ -435,7 +437,7 @@
     <div class="neural-modal-overlay initial-show" id="announcementModalOverlay" style="display:flex;">
         <div class="login-card neural-modal-content">
             <div class="ai-glow"></div>
-            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
+            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement" style="display:none;">
                 <span id="countdownText"></span>
                 <span class="close-icon">&times;</span> 
             </button>
