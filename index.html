@@ -205,11 +205,15 @@
 
         /* NEW: สไตล์สำหรับ Modal Loader */
         #modalLoader {
+            /* 🔴 FIX: ปรับเพื่อให้ Loader Text อยู่ด้านล่าง Spinner */
             position: absolute;
-            top: 50%;
+            top: 40%; 
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translateX(-50%);
             z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .neural-spinner {
             display: flex;
@@ -234,6 +238,15 @@
             40% { transform: scaleY(1); opacity: 1; }
         }
         
+        /* 🔴 NEW: Text สำหรับนับถอยหลังโหลด */
+        #modalLoaderText {
+             color: #f8fafc;
+             font-size: 0.95rem;
+             margin-top: 15px;
+             text-align: center;
+             font-weight: 500;
+        }
+
         /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
         #announcementActionArea {
             padding: 2px 32px 0px !important; /* เปลี่ยนจาก 0px เป็น 2px */
@@ -303,6 +316,25 @@
         #adminAuthModalOverlay .neural-modal-content {
             padding-bottom: 32px !important;
         }
+        
+        /* 🔴 NEW CSS: สำหรับ Footer นับถอยหลังแบบลอยตัว 🔴 */
+        #countdownFooter {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8); /* พื้นหลังดำจางๆ */
+            backdrop-filter: blur(5px);
+            z-index: 990; /* ให้อยู่เหนือเนื้อหา แต่ใต้ Modal */
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #countdownTimerText {
+            font-size: 0.95rem;
+            color: #fff;
+            padding: 10px;
+        }
     </style>
 </head>
 <body class="light-mode">
@@ -364,6 +396,7 @@
                 <div class="spinner-segment"></div>
                 <div class="spinner-segment"></div>
                 <div class="spinner-segment"></div>
+                <p id="modalLoaderText" style="display:none;"></p>
             </div>
             
             <div class="modal-body">
@@ -408,6 +441,9 @@
             </button>
             
         </div>
+    </div>
+    <div id="countdownFooter" style="display:none;">
+        <p id="countdownTimerText" style="text-align: center;"></p>
     </div>
     <script src="script.js"></script>
 </body>
