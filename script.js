@@ -21,8 +21,10 @@ class GeofenceApp {
         this.closeIcon = this.closeAnnouncementButton.querySelector('.close-icon'); 
         this.modalLoader = document.getElementById('modalLoader'); 
         
-        // 🔴 NEW: Modal Loader Text (ตอนนี้คือ .text-loader)
+        // 🔴 NEW: เพิ่ม Modal Loader Text
         this.modalLoaderText = document.getElementById('modalLoaderText');
+        // 🔴 NEW: เพิ่ม Text Loader Line Element
+        this.textLoaderLine = document.getElementById('textLoaderLine');
         
         // 🔴 NEW: Floating Footer Elements
         this.countdownFooter = document.getElementById('countdownFooter');
@@ -60,8 +62,8 @@ class GeofenceApp {
         // 🔴 NEW: Base URL สำหรับรูปภาพประกาศ (ถ้าใช้ ibb.co)
         this.ANNOUNCEMENT_IMAGE_BASE_URL = 'https://i.ibb.co/';
         
-        // 🔴 NEW: ตัวแปรสำหรับควบคุม Timeout 10 วินาที
-        this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC = 10; 
+        // 🔴 NEW: ตัวแปรสำหรับควบคุม Timeout 20 วินาที
+        this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC = 20; // 🔴 แก้ไข: 10 -> 20
         this.loadTimeoutInterval = null; 
 
         // Geofencing Parameters
@@ -292,8 +294,9 @@ class GeofenceApp {
              if (this.loadTimeoutInterval) {
                  clearInterval(this.loadTimeoutInterval);
                  this.loadTimeoutInterval = null;
-                 // 🔴 NEW: ซ่อน Text Loader 10s
                  if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+                 // 🔴 NEW: ซ่อนแถบโหลด 20s
+                 if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
              }
 
              this.modalLoader.style.display = 'none';
@@ -310,8 +313,9 @@ class GeofenceApp {
              if (this.loadTimeoutInterval) {
                  clearInterval(this.loadTimeoutInterval);
                  this.loadTimeoutInterval = null;
-                 // 🔴 NEW: ซ่อน Text Loader 10s
                  if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+                 // 🔴 NEW: ซ่อนแถบโหลด 20s
+                 if (this.textLoaderLine) this.textLoaderLine.style.display = 'none';
              }
              
              this.modalLoader.style.display = 'none';
@@ -612,7 +616,7 @@ class GeofenceApp {
 
     // --- Announcement Logic (Pure Sheets API) ---
 
-    // 🔴 NEW FUNCTION: จัดการการนับถอยหลังโหลด 10 วินาที
+    // 🔴 NEW FUNCTION: จัดการการนับถอยหลังโหลด 20 วินาที
     startLoadCountdown(action) {
         let remaining = this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC;
         
@@ -624,28 +628,36 @@ class GeofenceApp {
              this.modalLoaderText.style.display = 'block';
              this.modalLoaderText.style.color = '#f8fafc';
              
-             // 🔴 NEW: ตั้งค่าข้อความเริ่มต้นและรีเซ็ตแอนิเมชันของแถบ
-             this.modalLoaderText.textContent = `กำลังโหลด`;
-             this.modalLoaderText.style.animation = 'none';
-             this.modalLoaderText.offsetHeight; // Trigger reflow
-             this.modalLoaderText.style.animation = ''; // ใช้ CSS :after animation
+             // 🔴 NEW: แสดงแถบโหลด 20s
+             if (this.textLoaderLine) {
+                 this.textLoaderLine.style.display = 'block';
+                 // 🔴 FIX: บังคับให้เริ่ม Animation ใหม่ (ถ้ามี) 
+                 this.textLoaderLine.style.animation = 'none';
+                 this.textLoaderLine.offsetHeight; // Trigger reflow
+                 this.textLoaderLine.style.animation = 'lineGrow 20s linear infinite';
+             }
         }
         
         this.loadTimeoutInterval = setInterval(() => {
-            // 🔴 ไม่ต้องแสดงตัวเลข แต่ใช้เวลาเป็นเงื่อนไขหยุด
+            if (this.modalLoaderText) {
+                // 🔴 NEW: แสดงผล "กำลังโหลด (X)"
+                this.modalLoaderText.textContent = `กำลังโหลด (${remaining})`; 
+            }
             remaining--;
 
             if (remaining < 0) {
                 clearInterval(this.loadTimeoutInterval);
                 this.loadTimeoutInterval = null;
                 
-                // 🔴 ถ้าโหลดไม่เสร็จภายใน 10 วิ: ให้ถือว่าเสร็จสิ้นและไปต่อ 🔴
+                // 🔴 ถ้าโหลดไม่เสร็จภายใน 20 วิ: ให้ถือว่าเสร็จสิ้นและไปต่อ 🔴
                 if (this.announcementModalOverlay.classList.contains('show')) {
-                     console.warn("Announcement timed out after 10s. Continuing flow.");
+                     console.warn("Announcement timed out after 20s. Continuing flow.");
                      
-                     // 1. ซ่อน Loader
+                     // 1. ซ่อน Loader และ text
                      this.modalLoader.style.display = 'none';
                      if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+                     // 🔴 NEW: ซ่อนแถบโหลด 20s
+                     if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
 
                      // 2. หากยังไม่มีภาพ (แสดงว่าโหลดไม่ทัน) ให้ไปควบคุมปุ่มปิดเลย
                      if (this.announcementImage.style.display === 'none') {
@@ -769,7 +781,7 @@ class GeofenceApp {
             }, 50);
         }
         
-        // 🔴 NEW: เริ่มนับถอยหลัง Load Timeout 10 วินาที
+        // 🔴 NEW: เริ่มนับถอยหลัง Load Timeout 20 วินาที
         this.startLoadCountdown(action); 
         
         if (hasImage) {
@@ -777,6 +789,8 @@ class GeofenceApp {
         } else {
             this.modalLoader.style.display = 'none'; 
             if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+            // 🔴 NEW: ซ่อนแถบโหลด 20s
+            if (this.textLoaderLine) this.textLoaderLine.style.display = 'none';
             this.announcementModalOverlay.classList.remove('initial-show'); 
             this.startCloseButtonControl(action); 
         }
@@ -860,8 +874,9 @@ class GeofenceApp {
              clearInterval(this.loadTimeoutInterval);
              this.loadTimeoutInterval = null;
         }
-        // 🔴 NEW: ซ่อน Text Loader 10s
         if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+        // 🔴 NEW: ซ่อนแถบโหลด 20s
+        if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
 
 
         this.isAnnouncementActive = false;
