@@ -229,32 +229,6 @@ class GeofenceApp {
         }
     }
 
-    _fallbackCopy(text, iconElement) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";  
-        textArea.style.left = "-9999px";
-        textArea.style.top = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                this._showCopyFeedback(iconElement);
-            } else {
-                console.error('Fallback: Unable to copy link');
-                alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-            }
-        } catch (err) {
-            console.error('Fallback: Failed to copy text: ', err);
-            alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-        }
-
-        document.body.removeChild(textArea);
-    }
-
     _showCopyFeedback(iconElement) {
         const icon = iconElement.querySelector('i');
         const originalIconClass = icon.className;
@@ -612,7 +586,7 @@ class GeofenceApp {
 
     // --- Announcement Logic (Pure Sheets API) ---
 
-    // 🔴 NEW FUNCTION: จัดการการนับถอยหลังโหลด 20 วินาที (ไม่มีแถบโหลด)
+    // 🔴 NEW FUNCTION: จัดการการนับถอยหลังโหลด 10 วินาที
     startLoadCountdown(action) {
         let remaining = this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC;
         
@@ -627,8 +601,7 @@ class GeofenceApp {
         
         this.loadTimeoutInterval = setInterval(() => {
             if (this.modalLoaderText) {
-                // 🔴 NEW: แสดงผล "กำลังโหลด (X)"
-                this.modalLoaderText.textContent = `กำลังโหลด (${remaining})`; 
+                this.modalLoaderText.textContent = `(กำลังโหลด ${remaining})`; 
             }
             remaining--;
 
@@ -636,9 +609,9 @@ class GeofenceApp {
                 clearInterval(this.loadTimeoutInterval);
                 this.loadTimeoutInterval = null;
                 
-                // 🔴 ถ้าโหลดไม่เสร็จภายใน 20 วิ: ให้ถือว่าเสร็จสิ้นและไปต่อ 🔴
+                // 🔴 ถ้าโหลดไม่เสร็จภายใน 10 วิ: ให้ถือว่าเสร็จสิ้นและไปต่อ 🔴
                 if (this.announcementModalOverlay.classList.contains('show')) {
-                     console.warn("Announcement timed out after 20s. Continuing flow.");
+                     console.warn("Announcement timed out after 10s. Continuing flow.");
                      
                      // 1. ซ่อน Loader และ text
                      this.modalLoader.style.display = 'none';
@@ -766,7 +739,7 @@ class GeofenceApp {
             }, 50);
         }
         
-        // 🔴 NEW: เริ่มนับถอยหลัง Load Timeout 20 วินาที
+        // 🔴 NEW: เริ่มนับถอยหลัง Load Timeout 10 วินาที
         this.startLoadCountdown(action); 
         
         if (hasImage) {
@@ -805,10 +778,21 @@ class GeofenceApp {
              return;
         }
         
-        const hasGeofenceControl = this.announcementControl.hideCloseBtn || this.announcementControl.countdownSec > 0;
+        // 🔴 NEW LOGIC: ตรวจสอบเกณฑ์ D/E (hideCloseBtn หรือ countdownSec)
+        const studioEntry = this.studioName ? this.studioData[this.studioName] : null;
+        
+        let hasGeofenceControl = false;
+
+        if (studioEntry) {
+            hasGeofenceControl = studioEntry.hideCloseBtn || studioEntry.countdownSec > 0;
+        } else if (action === 'main_menu') {
+            // สำหรับหน้าเมนูหลัก (ถ้าไม่มี Studio Name) ให้ถือว่าไม่มีเกณฑ์ (ปิดได้ปกติ)
+            hasGeofenceControl = false;
+        }
+        
         
         if (!hasGeofenceControl) {
-            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E (hideCloseBtn หรือ countdownSec) ให้ปิด Modal ทันที
+            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E ให้ปิด Modal ทันที
             this.closeAnnouncementModal();
             return;
         }
