@@ -83,7 +83,6 @@ class GeofenceApp {
     
     // --- Authentication Logic ---
 
-    // 🔴 NEW: แสดง Modal รหัสผ่าน
     showAdminAuthModal() {
         // ตรวจสอบ Local Storage ก่อนแสดง Modal
         if (this.isAdminAuthenticated) {
@@ -139,9 +138,8 @@ class GeofenceApp {
                  // 🔴 FLOW ADMIN: โหลดประกาศเสมอ
                  const initialAction = 'main_menu';
                  const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
+                 // 🔴 FIX: isInitialLoad ต้องเป็น true เพื่อให้ Modal ประกาศแสดงผลตั้งแต่แรก
                  this.loadAnnouncement(initialAction, true, initialControl); 
-                 
-                 // 🔴 FIX: ไม่แสดง Modal Auth ทันที แต่รอให้ Modal ประกาศปิดก่อน
              }
         }).catch(error => {
             console.error("Fatal Error during initial config load:", error);
@@ -169,6 +167,29 @@ class GeofenceApp {
         }
     }
     
+    // 🔴 NEW: ฟังก์ชันแชร์ลิงก์
+    _shareStudioLink = (event) => {
+        const itemContainer = event.currentTarget.closest('.studio-menu-item');
+        const studioButton = itemContainer.querySelector('.neural-button');
+        const name = studioButton.querySelector('.button-text').textContent;
+        const url = `?studio=${encodeURIComponent(name)}`;
+        const linkToShare = window.location.origin + window.location.pathname + url;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: `ลิงก์เข้า Studio: ${name}`,
+                text: `ใช้ลิงก์นี้เพื่อเข้าสู่ระบบ ${name}`,
+                url: linkToShare
+            }).catch(error => {
+                console.error('Sharing failed', error);
+                alert('ไม่สามารถเปิดเมนูแชร์ได้ (โปรดลองคัดลอกลิ้งค์แทน)');
+            });
+        } else {
+            alert('เบราว์เซอร์ไม่รองรับฟังก์ชันแชร์โดยตรง โปรดใช้ปุ่มคัดลอกลิ้งค์');
+        }
+    }
+
+    // 🔴 NEW: คัดลอก URL ของหน้า Studio (ใช้ Fallback Method)
     _copyStudioLink = (event) => {
         const itemContainer = event.currentTarget.closest('.studio-menu-item');
         const studioButton = itemContainer.querySelector('.neural-button');
@@ -177,23 +198,58 @@ class GeofenceApp {
         const url = `?studio=${encodeURIComponent(name)}`;
         const linkToCopy = window.location.origin + window.location.pathname + url;
         
-        navigator.clipboard.writeText(linkToCopy).then(() => {
-            console.log(`Link copied: ${linkToCopy}`); 
-            
-            const iconElement = event.currentTarget.querySelector('i');
-            const originalIconClass = iconElement.className;
-            
-            iconElement.className = 'fas fa-check';
-            iconElement.style.color = '#10b981'; 
-            
-            setTimeout(() => {
-                 iconElement.className = originalIconClass;
-                 iconElement.style.color = '#475569';
-            }, 1500);
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
+        // 1. ลองใช้ Clipboard API (ต้องการ HTTPS)
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(linkToCopy).then(() => {
+                this._showCopyFeedback(event.currentTarget);
+            }).catch(() => {
+                // ถ้าล้มเหลว (เช่น ไม่ใช่ HTTPS/Permission ถูกจำกัด) ให้ไปใช้ Fallback
+                this._fallbackCopy(linkToCopy, event.currentTarget);
+            });
+        } else {
+            // 2. ใช้ Fallback Method (document.execCommand)
+            this._fallbackCopy(linkToCopy, event.currentTarget);
+        }
+    }
+
+    _fallbackCopy(text, iconElement) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";  
+        textArea.style.left = "-9999px";
+        textArea.style.top = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                this._showCopyFeedback(iconElement);
+            } else {
+                console.error('Fallback: Unable to copy link');
+                alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
+            }
+        } catch (err) {
+            console.error('Fallback: Failed to copy text: ', err);
             alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-        });
+        }
+
+        document.body.removeChild(textArea);
+    }
+
+    _showCopyFeedback(iconElement) {
+        const icon = iconElement.querySelector('i');
+        const originalIconClass = icon.className;
+        const originalIconColor = icon.style.color;
+        
+        icon.className = 'fas fa-check';
+        icon.style.color = '#10b981'; 
+        
+        setTimeout(() => {
+             icon.className = originalIconClass;
+             icon.style.color = originalIconColor;
+        }, 1500);
     }
 
     bindEvents() {
@@ -203,7 +259,6 @@ class GeofenceApp {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
         }
         
-        // 🔴 NEW: Event สำหรับ Admin Auth Modal
         if (this.adminAuthButton) {
             this.adminAuthButton.addEventListener('click', () => this.checkAdminPasscode());
         }
@@ -215,7 +270,6 @@ class GeofenceApp {
             });
         }
         
-        // เมื่อภาพโหลดเสร็จ (สำเร็จ)
         this.announcementImage.addEventListener('load', () => { 
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
@@ -226,7 +280,6 @@ class GeofenceApp {
              this.startCloseButtonControl(postAction);
         });
 
-        // เมื่อภาพโหลดเสร็จ (ล้มเหลว)
         this.announcementImage.addEventListener('error', () => {
              this.modalLoader.style.display = 'none';
              
@@ -239,7 +292,6 @@ class GeofenceApp {
 
              if (this.announcementActionArea.style.display === 'none') { 
                  this.isAnnouncementActive = false;
-                 // 🔴 ถ้าไม่มีประกาศ ให้ทำตาม Action ต่อไป
                  if (postAction !== 'main_menu') this.closeAnnouncementModal();
              }
              console.error("Announcement Image failed to load or permission denied.");
@@ -461,7 +513,7 @@ class GeofenceApp {
         }, 50); 
     }
     
-    // 🔴 NEW: Setup Menu Buttons (รวมปุ่มคัดลอกลิ้งค์)
+    // 🔴 NEW: Setup Menu Buttons (รวมปุ่มคัดลอก/แชร์ลิ้งค์)
     setupMenuButtons(studioNames) {
         this.menuButtonsContainer.innerHTML = ''; 
         
@@ -489,14 +541,25 @@ class GeofenceApp {
             
             itemContainer.appendChild(studioButton);
             
-            // 3. สร้างปุ่ม/ไอคอนคัดลอกลิ้งค์
+            // 3. สร้างกลุ่มไอคอน
+            const iconGroup = document.createElement('div');
+            iconGroup.className = 'icon-action-group';
+            
+            // 3a. ไอคอนคัดลอก
             const copyIconButton = document.createElement('div');
             copyIconButton.className = 'copy-icon-button';
             copyIconButton.innerHTML = `<i class="far fa-copy"></i>`;
-            
             copyIconButton.addEventListener('click', this._copyStudioLink);
+            iconGroup.appendChild(copyIconButton);
             
-            itemContainer.appendChild(copyIconButton);
+            // 3b. ไอคอนแชร์ 🔴 NEW: ปุ่มแชร์
+            const shareIconButton = document.createElement('div');
+            shareIconButton.className = 'share-icon-button';
+            shareIconButton.innerHTML = `<i class="fas fa-share-alt"></i>`;
+            shareIconButton.addEventListener('click', this._shareStudioLink);
+            iconGroup.appendChild(shareIconButton);
+
+            itemContainer.appendChild(iconGroup);
             
             this.menuButtonsContainer.appendChild(itemContainer);
         });
@@ -543,7 +606,6 @@ class GeofenceApp {
         
         if (!result.hasContent) {
             this.isAnnouncementActive = false; 
-            // 🔴 ถ้าไม่มีประกาศ ให้ทำตาม Action ต่อไปทันที
             this.startCloseButtonControl(action);
             return;
         }
@@ -670,7 +732,6 @@ class GeofenceApp {
     // --- Geofencing Logic (with 2-second delay and Retry Fix) ---
 
     checkGeolocation() {
-        // 🔴 เมื่อมีการกดปุ่ม ลองใหม่อีกครั้ง / เริ่มต้น ให้ตั้งค่าปุ่มกลับเป็นสถานะปกติก่อน
         this._setRetryToGeolocationCheck(); 
         
         if (this.target.lat === null) {
@@ -683,7 +744,7 @@ class GeofenceApp {
         this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
         this.retryButton.style.display = 'none'; 
 
-        // 🔴 FIX 4: เพิ่ม setTimeout 2000ms (2 วินาที) ก่อนเรียก GPS API 🔴
+        // 🔴 FIX 4: เพิ่ม setTimeout 100ms ก่อนเรียก GPS API (ลดดีเลย์)
         setTimeout(() => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -695,7 +756,7 @@ class GeofenceApp {
             } else {
                 this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
             }
-        }, 2000); // 👈 หน่วงเวลา 2 วินาที
+        }, 100); // 👈 ลดเหลือ 100 มิลลิวินาที
     }
     
     geoSuccess(position) {
@@ -720,7 +781,6 @@ class GeofenceApp {
         let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
         let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
 
-        // 🔴 เมื่อเกิด Error ใดๆ ให้ใช้ปุ่ม "ลองใหม่อีกครั้ง" ตามปกติ 🔴
         this._setRetryToGeolocationCheck(); 
 
         if (error.code === 1) {
