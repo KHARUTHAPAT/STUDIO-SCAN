@@ -74,7 +74,7 @@ class GeofenceApp {
     init() {
         this.bindEvents();
         
-        // 🔴 NEW: ถ้ามี studioName ให้ล้างประวัติ (History) ทันที เพื่อป้องกันการกด Back
+        // 🔴 FIX 3: ล้างประวัติ (History) ทันที เพื่อป้องกันการกด Back เมื่อเป็นหน้า Studio
         if (this.studioName) {
             this.clearInitialHistory();
         }
@@ -95,12 +95,20 @@ class GeofenceApp {
         });
     }
     
-    // 🔴 NEW FUNCTION: ล้างประวัติการเข้าชมเริ่มต้น 🔴
+    // 🔴 FIX 3: ฟังก์ชันสำหรับล้างประวัติการเข้าชมเริ่มต้น
     clearInitialHistory() {
-        // แทนที่ URL ปัจจุบันใน History Stack ด้วยตัวมันเอง
-        // ทำให้เมื่อผู้ใช้กด Back จะไม่สามารถย้อนกลับมาที่หน้านี้ได้
-        // การกระทำนี้สำคัญมากสำหรับหน้า Studio ที่เปิดในแท็บใหม่
         window.history.replaceState(null, null, window.location.href);
+    }
+    
+    // 🔴 NEW: ฟังก์ชันสำหรับกำหนด Event Listener ของปุ่ม Retry ให้เป็นสถานะปกติ
+    _setRetryToGeolocationCheck() {
+        // ใช้ cloneNode เพื่อลบ Event Listener เก่าทั้งหมด
+        const newButton = this.retryButton.cloneNode(true);
+        this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
+        this.retryButton = newButton; // อัปเดต Reference
+        
+        this.retryButton.addEventListener('click', () => this.checkGeolocation());
+        this.retryButton.querySelector('.button-text').textContent = 'ลองใหม่อีกครั้ง';
     }
     
     _onAnnouncementButtonClick = (event) => {
@@ -111,7 +119,8 @@ class GeofenceApp {
     }
 
     bindEvents() {
-        this.retryButton.addEventListener('click', () => this.checkGeolocation());
+        // 🔴 FIX: ใช้ฟังก์ชันตั้งค่าเริ่มต้นแทนการกำหนด Event ตรงๆ
+        this._setRetryToGeolocationCheck(); 
         
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
@@ -233,7 +242,6 @@ class GeofenceApp {
     }
 
     async fetchAnnouncementConfigFromSheet() {
-        // H18, K18, L18
         const range = `${this.CONFIG_SHEET_NAME}!H18:L18`; 
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
         
@@ -371,7 +379,6 @@ class GeofenceApp {
             `;
 
             newButton.addEventListener('click', () => {
-                // 🔴 คืนค่าเป็น window.open(..., '_blank') เพื่อเปิดแท็บใหม่
                 const url = `?studio=${encodeURIComponent(name)}`;
                 window.open(window.location.origin + window.location.pathname + url, '_blank'); 
             });
@@ -414,7 +421,6 @@ class GeofenceApp {
         this.announcementModalOverlay.setAttribute('data-post-action', action);
         this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
         
-        // 🔴 ใช้ค่าที่โหลดจาก this.announcementConfig 🔴
         const result = this.announcementConfig;
         
         const hasImage = result.imageUrl && result.imageUrl.trim() !== '';
@@ -456,7 +462,7 @@ class GeofenceApp {
         }
     }
     
-    // --- (startCloseButtonControl, closeAnnouncementModal, Geofencing Logic เหมือนเดิม) ---
+    // --- Close Button Control ---
     startCloseButtonControl(action) {
         if (!this.announcementModalOverlay) {
              if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
@@ -533,25 +539,34 @@ class GeofenceApp {
         }, 300); 
     }
 
+    // --- Geofencing Logic (with 2-second delay and Retry Fix) ---
+
     checkGeolocation() {
+        // 🔴 เมื่อมีการกดปุ่ม ลองใหม่อีกครั้ง / เริ่มต้น ให้ตั้งค่าปุ่มกลับเป็นสถานะเดิมก่อน
+        this._setRetryToGeolocationCheck(); 
+        
         if (this.target.lat === null) {
              this.updateStatus('error', 'การตั้งค่า Geofence ผิดพลาด', 'ไม่พบพิกัดเป้าหมาย (โปรดตรวจสอบ K1-K3)');
              this.retryButton.style.display = 'flex';
              return;
         }
         
+        // 1. แสดงสถานะ Loading ทันที
         this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
         this.retryButton.style.display = 'none'; 
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => this.geoSuccess(position),
-                (error) => this.geoError(error), 
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
-            );
-        } else {
-            this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
-        }
+        // 🔴 FIX 4: เพิ่ม setTimeout 2000ms (2 วินาที) ก่อนเรียก GPS API 🔴
+        setTimeout(() => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => this.geoSuccess(position),
+                    (error) => this.geoError(error), 
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+                );
+            } else {
+                this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
+            }
+        }, 2000); // 👈 หน่วงเวลา 2 วินาที
     }
     
     geoSuccess(position) {
@@ -578,10 +593,23 @@ class GeofenceApp {
 
         if (error.code === 1) {
             errorMessage += ' (ถูกปฏิเสธ)';
+            
+            // 🔴 FIX: เปลี่ยนปุ่มให้กลายเป็นปุ่ม Reload เมื่อถูกปฏิเสธสิทธิ์
+            const newButton = this.retryButton.cloneNode(true);
+            this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
+            this.retryButton = newButton; 
+            
+            // ใช้งาน Event Listener ใหม่ (Reload)
+            this.retryButton.removeEventListener('click', this.checkGeolocation); 
+            this.retryButton.addEventListener('click', () => window.location.reload()); 
+            this.retryButton.querySelector('.button-text').textContent = 'รีเฟรชเพื่อขอสิทธิ์ใหม่'; 
+            
         } else if (error.code === 2) {
             errorMessage += ' (ไม่พบตำแหน่ง)';
+            this._setRetryToGeolocationCheck(); // คืนปุ่มเป็นสถานะเดิม
         } else if (error.code === 3) {
             errorMessage += ' (หมดเวลาค้นหา)';
+            this._setRetryToGeolocationCheck(); // คืนปุ่มเป็นสถานะเดิม
         }
         
         this.updateStatus('error', errorMessage, customMessage);
