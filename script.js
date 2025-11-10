@@ -1,400 +1,774 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title id="pageTitle">ประกาศ</title>
+// Geofencing and Announcement Logic (Pure Google Sheets API v4)
+class GeofenceApp {
+    constructor() {
+        // UI Elements
+        this.mainContainerWrapper = document.getElementById('mainContainerWrapper');
+        this.mainMenuCard = document.getElementById('mainMenuCard');
+        this.geofenceChecker = document.getElementById('geofenceChecker');
+        this.menuButtonsContainer = document.getElementById('adminMenuButtons');
+        
+        this.statusTitle = document.getElementById('statusTitle');
+        this.statusMessage = document.getElementById('statusMessage');
+        this.statusIconContainer = document.getElementById('statusIcon');
+        this.retryButton = document.getElementById('retryButton');
+        this.pageTitle = document.getElementById('pageTitle');
+        
+        // Announcement Modal Elements
+        this.announcementModalOverlay = document.getElementById('announcementModalOverlay');
+        this.announcementImage = document.getElementById('announcementImage');
+        this.closeAnnouncementButton = document.getElementById('closeAnnouncementButton');
+        this.countdownText = document.getElementById('countdownText'); 
+        this.closeIcon = this.closeAnnouncementButton.querySelector('.close-icon'); 
+        this.modalLoader = document.getElementById('modalLoader'); 
+        
+        // NEW: Announcement Button Elements
+        this.announcementActionArea = document.getElementById('announcementActionArea');
+        this.announcementActionButton = document.getElementById('announcementActionButton');
+
+        // 🔴 NEW: Admin Auth Elements
+        this.adminAuthModalOverlay = document.getElementById('adminAuthModalOverlay');
+        this.adminPasscodeInput = document.getElementById('adminPasscodeInput');
+        this.adminAuthButton = document.getElementById('adminAuthButton');
+        this.adminAuthError = document.getElementById('adminAuthError');
+        
+        this.ADMIN_PASSCODE = 'admin123'; // 🔴 รหัสผ่าน Admin
+        this.isAdminAuthenticated = false; // สถานะการล็อกอิน
+
+        // =================================================================
+        // *** 🔴 PURE SHEETS API V4 CONFIGURATION 🔴 ***
+        // =================================================================
+        this.API_KEY = 'AIzaSyBivFhVOiCJdpVF4xNb7vYRNJLxLj60Rk0'; 
+        this.SHEET_ID = '1o8Z0bybLymUGlm7jfgpY4qHhwT9aC2mO141Xa1YlZ0Q'; 
+        
+        this.STUDIO_SHEET_NAME = 'Studio'; 
+        this.CONFIG_SHEET_NAME = 'รวมข้อมูล'; 
+        
+        // Geofencing Parameters
+        this.params = new URLSearchParams(window.location.search);
+        this.studioName = this.params.get('studio');
+        
+        this.studioData = {}; 
+        this.geofenceConfig = {}; 
+        this.announcementConfig = {}; 
+        
+        this.target = { lat: null, lon: null, dist: null, url: null };
+
+        this.isBypassMode = false;
+        this.bypassUrl = null; 
+        
+        this.announcementControl = {
+            hideCloseBtn: false,
+            countdownSec: 0
+        };
+        this.isAnnouncementActive = false;
+        this.countdownInterval = null;
+
+        this.geofenceChecker.style.display = 'none';
+        this.mainMenuCard.style.display = 'none';
+        this.mainContainerWrapper.style.display = 'none'; 
+        
+        this.pageTitle.textContent = 'ประกาศ'; 
+        
+        this.closeAnnouncementButton.style.display = 'none'; 
+        
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode'); 
+        document.body.style.backgroundColor = '#f8fafc';
+        
+        document.body.style.overflow = 'hidden'; 
+
+        this.init();
+    }
     
-    <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
+    // --- Authentication Logic ---
+
+    showAdminAuthModal() {
+        this.adminAuthModalOverlay.style.display = 'flex';
+        this.adminAuthModalOverlay.classList.add('show');
+        this.adminPasscodeInput.value = ''; // เคลียร์ค่าเก่า
+        this.adminPasscodeInput.focus();
+    }
     
-    <link rel="stylesheet" href="style.css">
+    hideAdminAuthModal(callback) {
+        this.adminAuthModalOverlay.classList.remove('show');
+        setTimeout(() => {
+            this.adminAuthModalOverlay.style.display = 'none';
+            if (callback) callback();
+        }, 300);
+    }
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    checkAdminPasscode() {
+        const inputCode = this.adminPasscodeInput.value.trim();
+        if (inputCode === this.ADMIN_PASSCODE) {
+            this.isAdminAuthenticated = true;
+            this.adminAuthError.style.display = 'none';
+            this.hideAdminAuthModal(() => {
+                this.continueAppFlow(); // ไปที่หน้าเมนูหลัก
+            });
+        } else {
+            this.adminAuthError.style.display = 'block';
+            this.adminPasscodeInput.value = '';
+            this.adminPasscodeInput.focus();
+        }
+    }
+
+    init() {
+        this.bindEvents();
+        
+        // 🔴 FIX 3: ล้างประวัติ (History) ทันที เพื่อป้องกันการกด Back เมื่อเป็นหน้า Studio
+        if (this.studioName) {
+            this.clearInitialHistory();
+        }
+        
+        // 1. โหลด Config ทั้งหมด (รวมถึงประกาศ) ก่อนเริ่ม Flow
+        this.loadInitialConfig().then(() => {
+             if (this.studioName) {
+                 this.loadStudioFlow('geofence_check');
+             } else {
+                 // 🔴 FLOW ADMIN: เมื่อเข้าหน้าหลัก: โหลดประกาศ แล้วรอ Modal Auth
+                 this.showAdminAuthModal();
+                 
+                 const initialAction = 'main_menu';
+                 const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
+                 this.loadAnnouncement(initialAction, false, initialControl); 
+             }
+        }).catch(error => {
+            console.error("Fatal Error during initial config load:", error);
+            this.showErrorScreen(`ไม่สามารถโหลดข้อมูลเริ่มต้นได้: ${error.message}`);
+        });
+    }
     
-    <style>
-        /* ============================================== */
-        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
-        /* ============================================== */
-        html, body {
-            /* ลบ height: 100%; ออกเพื่อให้เนื้อหาไหลและ body ขยายได้ */
-            /* ลบ: overflow: hidden !important; */ 
-        }
+    clearInitialHistory() {
+        window.history.replaceState(null, null, window.location.href);
+    }
+    
+    _setRetryToGeolocationCheck() {
+        // ใช้ cloneNode เพื่อลบ Event Listener เก่าทั้งหมด
+        const newButton = this.retryButton.cloneNode(true);
+        this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
+        this.retryButton = newButton; // อัปเดต Reference
         
-        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (แก้ไขการกินขอบ) *** */
-        body.menu-scrollable {
-            /* ยกเลิกการจัดให้อยู่ตรงกลางของ Body */
-            align-items: flex-start !important; /* จัดชิดด้านบน */
-            justify-content: center !important; /* ยังคงจัดอยู่ตรงกลางแนวนอน */
-            padding-top: 20px; /* เพิ่ม padding ด้านบนให้มีระยะห่าง */
-            padding-bottom: 20px; /* เพิ่ม padding ด้านล่าง */
-            min-height: 100vh; 
+        // กำหนด Event Listener เป็นการเรียก checkGeolocation() 
+        this.retryButton.addEventListener('click', () => this.checkGeolocation());
+        this.retryButton.querySelector('.button-text').textContent = 'ลองใหม่อีกครั้ง';
+    }
+    
+    _onAnnouncementButtonClick = (event) => {
+        const url = event.currentTarget.getAttribute('data-url');
+        if (url) {
+            window.open(url, '_blank');
         }
+    }
+    
+    // 🔴 NEW: คัดลอก URL ของหน้า Studio
+    _copyStudioLink = (event) => {
+        // 🔴 NEW: Target คือไอคอนที่อยู่ข้าง ๆ ปุ่ม Studio
+        const itemContainer = event.currentTarget.closest('.studio-menu-item');
+        const studioButton = itemContainer.querySelector('.neural-button');
         
-        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
-        /* สีเริ่มต้นของ Card ถูกตั้งเป็น Light Mode ใน style.css */
-        .status-card {
-            background: #ffffff;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            border-radius: 20px;
-            padding: 40px 32px;
-            position: relative;
-            text-align: center;
-            width: 100%;
-            max-width: 420px;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        }
-        .status-card h1 {
-            color: #000000; 
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-        }
-        .status-card p {
-            color: #475569; 
-            font-size: 1rem;
-            margin-bottom: 20px;
-        }
-        .status-icon {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .status-icon svg {
-            color: #3b82f6; 
-            width: 100%;
-            height: 100%;
-        }
-
-        /* เมนูแอดมิน */
-        #adminMenuButtons {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .neural-button {
-            text-decoration: none;
-            min-height: 55px;
-        }
+        const name = studioButton.querySelector('.button-text').textContent;
+        const url = `?studio=${encodeURIComponent(name)}`;
+        const linkToCopy = window.location.origin + window.location.pathname + url;
         
-        /* สไตล์สำหรับ Geofencing Status Card */
-        #geofenceChecker {
-            display: none;
-            width: 100%;
-        }
-        
-        /* สไตล์สำหรับ Modal (Announcement) */
-        .neural-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6); /* FIX: ปรับความทึบเป็น 0.6 (เข้มขึ้นตามต้องการ) */
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-        /* NEW: Class สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ */
-        .neural-modal-overlay.initial-show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .neural-modal-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .neural-modal-content {
-            background: #000;
-            border: none;
-            padding: 0;
-            border-radius: 20px;
-            max-width: 90vw;
-            width: 400px;
-            height: auto;
-            max-height: 90vh;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            position: relative;
-            transform: translateY(20px);
-            opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            overflow: hidden;
-            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
-            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
-        }
-        .neural-modal-overlay.show .neural-modal-content,
-        .neural-modal-overlay.initial-show .neural-modal-content {
-             transform: translateY(0);
-             opacity: 1;
-        }
-        /* *** แก้ไข: ปรับสไตล์ของปุ่มปิดสำหรับ Countdown *** */
-        .modal-close-button {
-            position: fixed; 
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.35); /* ปรับให้จางลง */
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            z-index: 1010; 
-            border-radius: 50%;
-            width: 35px;
-            height: 35px;
-            font-size: 22px;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-close-button:hover {
-            background: #fff;
-            color: #000;
-        }
-        
-        /* สไตล์สำหรับตัวเลขที่ซ่อนกากบาทอยู่ */
-        #countdownText {
-            font-size: 1.2rem; 
-            font-weight: 400; /* ตัวบาง */
-            color: #ffffff; /* สีขาวปกติ */
-            display: none;
-        }
-        
-        /* สไตล์สำหรับกากบาท */
-        .close-icon {
-            display: block; 
-        }
-
-
-        .modal-body {
-            padding: 0; 
-            line-height: 0; 
-            position: relative; 
-            min-height: 150px; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1; /* ให้ Body ขยายได้ */
-            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
-        }
-        .modal-body img {
-            width: 100%;
-            height: auto;
-            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
-            object-fit: contain; 
-            border-radius: 20px; 
-            margin-top: 0;
-        }
-        .login-header {
-            display: none; 
-        }
-
-        /* NEW: สไตล์สำหรับ Modal Loader */
-        #modalLoader {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10;
-        }
-        .neural-spinner {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-            justify-content: center;
-            width: 40px; 
-            height: 40px;
-        }
-        .spinner-segment {
-            width: 6px; 
-            height: 25px; 
-            background: #3b82f6; 
-            border-radius: 3px;
-            animation: neuralSpinner 1.2s ease-in-out infinite;
-        }
-        .spinner-segment:nth-child(2) { animation-delay: 0.1s; }
-        .spinner-segment:nth-child(3) { animation-delay: 0.2s; }
-
-        @keyframes neuralSpinner {
-            0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.8; }
-            40% { transform: scaleY(1); opacity: 1; }
-        }
-        
-        /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
-        #announcementActionArea {
-            padding: 2px 32px 0px !important; /* เปลี่ยนจาก 0px เป็น 2px */
-            margin-top: 0; 
-            z-index: 5; 
-        }
-        .neural-modal-content {
-            padding-bottom: 0 !important; 
-        }
-        /* แก้ไข: เพิ่มสไตล์เฉพาะสำหรับปุ่ม action ใน Modal ให้ชิดขอบล่าง */
-        #announcementActionButton {
-            border-radius: 0 0 20px 20px !important;
-            min-height: 55px;
-        }
-        #announcementActionButton .button-bg {
-             border-radius: 0 0 20px 20px !important;
-        }
-        
-        /* 🔴 NEW CSS: สำหรับปุ่มคัดลอกลิ้งค์ขนาดเล็ก */
-        .studio-menu-item {
-            position: relative;
-            margin-bottom: 20px; /* เพิ่มพื้นที่ระหว่างกลุ่มปุ่ม */
-        }
-        .studio-menu-item .neural-button {
-            margin-bottom: 0 !important;
-        }
-        .copy-icon-button {
-            position: absolute;
-            bottom: -15px; /* เลื่อนลงมาเล็กน้อย */
-            right: 15px;
-            width: 30px;
-            height: 30px;
-            background: #e2e8f0;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .copy-icon-button:hover {
-            background: #cbd5e1;
-            transform: scale(1.1);
-        }
-        .copy-icon-button i {
-            color: #475569;
-            font-size: 14px;
-        }
-        
-        /* 🔴 FIX: เพิ่ม margin ให้ปุ่มยืนยันใน Modal Auth */
-        #adminAuthModalOverlay .neural-modal-content {
-            padding-bottom: 32px !important;
-        }
-    </style>
-</head>
-<body class="light-mode">
-    <div class="neural-background">
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-        <div class="neural-node"></div>
-    </div>
-
-    <div class="login-container" id="mainContainerWrapper" style="display: none !important;">
-        
-        <div class="status-card" id="mainMenuCard" style="display:none;"> 
-            <div class="ai-glow"></div>
+        navigator.clipboard.writeText(linkToCopy).then(() => {
+            // แสดงข้อความใน Console แทน Alert
+            console.log(`Link copied: ${linkToCopy}`); 
             
-            <div class="login-header" style="margin-bottom: 10px;">
-                <h1 style="font-size: 1.8rem;" id="menuTitle">ประกาศ</h1>
-                <p>เลือก Studio ที่ต้องการเข้าถึง</p>
-            </div>
+            // เปลี่ยนไอคอนชั่วคราวเป็นเครื่องหมายถูก
+            const iconElement = event.currentTarget.querySelector('i');
+            const originalIconClass = iconElement.className;
             
-            <div id="adminMenuButtons">
-                </div>
+            iconElement.className = 'fas fa-check';
+            iconElement.style.color = '#10b981'; // สีเขียว
             
-        </div>
-        
-        <div class="status-card" id="geofenceChecker">
-             <div class="ai-glow"></div>
-            
-            <div class="status-icon" id="statusIcon">
-                <svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
-                </svg>
-            </div>
-            
-            <h1 id="statusTitle">กำลังตรวจสอบตำแหน่ง Studio...</h1> 
-            <p id="statusMessage">โปรดอนุญาตให้เข้าถึงตำแหน่ง GPS ของคุณ</p>
+            setTimeout(() => {
+                 iconElement.className = originalIconClass;
+                 iconElement.style.color = '#475569';
+            }, 1500);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            // แสดง Alert เมื่อคัดลอกล้มเหลว
+            alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
+        });
+    }
 
-            <button class="neural-button" id="retryButton" style="display:none; margin-bottom: 0;">
-                <div class="button-bg"></div>
-                <span class="button-text">ลองใหม่อีกครั้ง</span>
-                <div class="button-glow"></div>
-            </button>
-        </div>
+    bindEvents() {
+        this._setRetryToGeolocationCheck(); 
         
-    </div>
+        if (this.closeAnnouncementButton) {
+            this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
+        }
+        
+        // 🔴 NEW: Event สำหรับ Admin Auth Modal
+        if (this.adminAuthButton) {
+            this.adminAuthButton.addEventListener('click', () => this.checkAdminPasscode());
+        }
+        if (this.adminPasscodeInput) {
+            this.adminPasscodeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.checkAdminPasscode();
+                }
+            });
+        }
+        
+        // เมื่อภาพโหลดเสร็จ (สำเร็จ)
+        this.announcementImage.addEventListener('load', () => { 
+             this.modalLoader.style.display = 'none';
+             this.announcementImage.style.display = 'block';
+             
+             this.announcementModalOverlay.classList.remove('initial-show');
+             
+             const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+             this.startCloseButtonControl(postAction);
+        });
 
-    <div class="neural-modal-overlay initial-show" id="announcementModalOverlay" style="display:flex;">
-        <div class="login-card neural-modal-content">
-            <div class="ai-glow"></div>
-            <button type="button" class="modal-close-button" id="closeAnnouncementButton" aria-label="Close Announcement">
-                <span id="countdownText"></span>
-                <span class="close-icon">&times;</span> 
-            </button>
-            <div class="login-header" style="margin-bottom: 10px; text-align: center;">
-            </div>
+        // เมื่อภาพโหลดเสร็จ (ล้มเหลว)
+        this.announcementImage.addEventListener('error', () => {
+             this.modalLoader.style.display = 'none';
+             
+             this.announcementModalOverlay.classList.remove('initial-show');
+             
+             this.announcementImage.style.display = 'none'; 
+             
+             const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+             this.startCloseButtonControl(postAction);
+
+             if (this.announcementActionArea.style.display === 'none') { 
+                 this.isAnnouncementActive = false;
+                 // 🔴 ไม่ต้องปิด Modal ถ้าเป็น Initial Load เพราะ Modal Auth เปิดอยู่
+                 if (postAction !== 'main_menu') this.closeAnnouncementModal();
+             }
+             console.error("Announcement Image failed to load or permission denied.");
+        });
+    }
+
+    // =================================================================
+    // *** 🟢 GOOGLE SHEETS API V4 FETCHERS (ALL DATA) 🟢 ***
+    // =================================================================
+    
+    async fetchStudioListFromSheet() {
+        const range = `${this.STUDIO_SHEET_NAME}!A:E`;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
             
-            <div id="modalLoader" class="neural-spinner"> 
-                <div class="spinner-segment"></div>
-                <div class="spinner-segment"></div>
-                <div class="spinner-segment"></div>
-            </div>
+            const list = {};
+            const values = data.values || [];
             
-            <div class="modal-body">
-                <img id="announcementImage" src="" alt="Announcement Image" style="display:none;">
+            for (let i = 0; i < values.length; i++) {
+                const row = values[i];
+                const name = row[0] ? row[0].toString().trim() : '';
+                const url = row[1] ? row[1].toString().trim() : '';
+                const checkCondition = row[2];
+                const hideCloseBtn = (row[3] == 1 || row[3] === '1');
+                let countdownSec = parseInt(row[4]);
                 
-            </div>
-            
-            <div id="announcementActionArea" style="padding: 0px 32px 0px; width: 100%; display:none;">
-                <button class="neural-button" id="announcementActionButton" type="button" style="margin-bottom: 0; min-height: 55px;">
-                    <div class="button-bg"></div>
-                    <span class="button-text">ข้อความปุ่ม</span> 
-                    <div class="button-glow"></div>
-                </button>
-            </div>
-            
-        </div>
-    </div>
+                if (isNaN(countdownSec) || countdownSec < 0) {
+                    countdownSec = 0;
+                }
+                
+                if (name && url) {
+                    const requiresGeofence = (checkCondition == 1 || checkCondition === '1');
+                    
+                    list[name] = {
+                        url: url,
+                        check: requiresGeofence,
+                        hideCloseBtn: hideCloseBtn, 
+                        countdownSec: countdownSec 
+                    };
+                }
+            }
+            return list;
+        } catch (error) {
+            console.error('Error fetching Studio List:', error);
+            throw new Error(`Failed to fetch studio list from Google Sheet: ${error.message}`);
+        }
+    }
     
-    <div class="neural-modal-overlay" id="adminAuthModalOverlay" style="display:none;">
-        <div class="login-card neural-modal-content" style="max-width: 350px; padding: 32px; height: auto; transform: translateY(0); opacity: 1;">
-            <h2 style="color: #f8fafc; margin-bottom: 20px; font-size: 1.5rem; text-align: center;">🛡️ เข้าถึงเมนู Admin</h2>
-            <p style="color: #94a3b8; margin-bottom: 20px; text-align: center;">โปรดใส่รหัสผ่านเพื่อดำเนินการต่อ:</p>
+    async fetchGeofenceConfigFromSheet() {
+        const range = `${this.CONFIG_SHEET_NAME}!K1:K3`;
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
             
-            <input type="password" id="adminPasscodeInput" placeholder="รหัสผ่าน" style="
-                width: 100%; 
-                padding: 12px; 
-                margin-bottom: 15px;
-                border-radius: 8px;
-                border: 1px solid #3b82f6;
-                background: #1f2937;
-                color: #f8fafc;
-                font-size: 16px;
-                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
-            ">
+            const values = data.values || [];
+            if (values.length < 3) {
+                 throw new Error("Missing values for Geofence config (K1:K3).");
+            }
             
-            <p id="adminAuthError" style="color: #ef4444; margin-bottom: 15px; display: none; text-align: center;">รหัสผ่านไม่ถูกต้อง</p>
+            const lat = parseFloat(values[0][0]);
+            const lon = parseFloat(values[1][0]);
+            const radiusMeters = parseFloat(values[2][0]);
+
+            if (isNaN(lat) || isNaN(lon) || isNaN(radiusMeters) || radiusMeters <= 0) {
+                 throw new Error("Invalid Geofence configuration values (K1, K2, K3).");
+            }
             
-            <button class="neural-button" id="adminAuthButton" type="button" style="margin-bottom: 0; min-height: 50px;">
-                <div class="button-bg" style="background: #3b82f6;"></div>
-                <span class="button-text" style="color: #ffffff;">ยืนยัน</span> 
-                <div class="button-glow"></div>
-            </button>
+            return {
+                lat: lat,
+                lon: lon,
+                dist: radiusMeters / 1000 // แปลงเป็นกิโลเมตร
+            };
+        } catch (error) {
+            console.error('Error fetching Geofence Config:', error);
+            throw new Error(`Failed to fetch Geofence config from Google Sheet: ${error.message}`);
+        }
+    }
+
+    async fetchAnnouncementConfigFromSheet() {
+        const range = `${this.CONFIG_SHEET_NAME}!H18:L18`; 
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                 const errorData = await response.json();
+                throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
             
-        </div>
-    </div>
-    <script src="script.js"></script>
-</body>
-</html>
+            const values = data.values && data.values[0] || [];
+            
+            const imageUrl = values[0] ? values[0].toString().trim() : ''; 
+            const buttonText = values[3] ? values[3].toString().trim() : '';
+            const buttonUrl = values[4] ? values[4].toString().trim() : '';
+            
+            const isValidUrl = buttonUrl.startsWith('http://') || buttonUrl.startsWith('https://');
+            const isValidButton = buttonText && buttonUrl && isValidUrl;
+            
+            return {
+                imageUrl: imageUrl,
+                buttonText: isValidButton ? buttonText : '',
+                buttonUrl: isValidButton ? buttonUrl : '',
+                hasContent: imageUrl || isValidButton
+            };
+        } catch (error) {
+            console.error('Error fetching Announcement Config:', error);
+            return { hasContent: false };
+        }
+    }
+
+    async loadInitialConfig() {
+        const [studioList, geofenceConfig, announcementConfig] = await Promise.all([
+            this.fetchStudioListFromSheet(),
+            this.fetchGeofenceConfigFromSheet(),
+            this.fetchAnnouncementConfigFromSheet()
+        ]);
+        
+        this.studioData = studioList;
+        this.geofenceConfig = geofenceConfig;
+        this.announcementConfig = announcementConfig;
+    }
+    
+    // --- App Flow Control ---
+
+    async loadStudioFlow(action) {
+        
+        const studioEntry = this.studioData[this.studioName];
+        
+        if (!studioEntry) {
+            alert("ไม่สามารถโหลดข้อมูล Studio ได้ หรือ Studio ไม่อยู่ในรายการ");
+            window.location.href = window.location.origin + window.location.pathname; 
+            return;
+        }
+        
+        this.announcementControl = {
+             hideCloseBtn: studioEntry.hideCloseBtn,
+             countdownSec: studioEntry.countdownSec
+        };
+        
+        this.target.url = studioEntry.url;
+        this.isBypassMode = studioEntry.check === false;
+
+        if (this.isBypassMode) {
+             action = 'bypass_redirect';
+             this.bypassUrl = studioEntry.url;
+        } else {
+             this.target.lat = this.geofenceConfig.lat;
+             this.target.lon = this.geofenceConfig.lon;
+             this.target.dist = this.geofenceConfig.dist;
+        }
+        
+        this.loadAnnouncement(action, true, this.announcementControl); 
+    }
+    
+    // 🔴 เมื่อเข้าถึงหน้า Menu สำเร็จ (หลังใส่รหัสผ่าน)
+    continueAppFlow() {
+        this.isBypassMode = false;
+        this.bypassUrl = null;
+        this.showMainMenu();
+    }
+    
+    // --- UI/Mode Handlers ---
+
+    showMainMenu() {
+        document.body.classList.add('light-mode'); 
+        document.body.classList.remove('dark-mode'); 
+        document.body.style.backgroundColor = '#f8fafc'; 
+        
+        this.mainContainerWrapper.style.display = 'flex'; 
+        this.geofenceChecker.style.display = 'none';
+        this.mainMenuCard.style.display = 'flex';
+        
+        document.body.style.overflow = 'auto'; 
+        document.body.classList.add('menu-scrollable');
+        
+        this.mainMenuCard.style.marginTop = '0';
+        document.getElementById('mainContainerWrapper').style.marginTop = '0';
+        
+        this.pageTitle.textContent = 'เมนู Studio'; 
+        document.getElementById('menuTitle').textContent = 'เมนู Studio'; 
+        document.getElementById('mainMenuCard').querySelector('p').textContent = 'เลือก Studio ที่ต้องการเข้าถึง';
+
+        this.setupMenuButtons(Object.keys(this.studioData));
+    }
+
+    showGeofenceChecker() {
+        // 🔴 FIX 1: ตัดกล่องสี่เหลี่ยมว่างเปล่า โดยเปลี่ยน display ของ container หลักเป็น none ก่อน
+        this.mainContainerWrapper.style.display = 'none'; 
+        document.body.style.overflow = 'hidden'; 
+        document.body.classList.remove('menu-scrollable');
+        
+        // ให้หน่วงเวลาเล็กน้อยเพื่อให้หน้าจอว่าง
+        setTimeout(() => {
+            document.body.classList.add('light-mode'); 
+            document.body.classList.remove('dark-mode'); 
+            document.body.style.backgroundColor = '#f8fafc'; 
+            
+            this.mainContainerWrapper.style.display = 'flex'; 
+            this.mainMenuCard.style.display = 'none';
+            this.geofenceChecker.style.display = 'flex';
+            this.pageTitle.textContent = `ตรวจสอบ: ${this.studioName}`;
+
+            this.mainMenuCard.style.marginTop = '';
+            document.getElementById('mainContainerWrapper').style.marginTop = '';
+        }, 50); // หน่วงเวลาเล็กน้อย
+    }
+    
+    // 🔴 NEW: Setup Menu Buttons (รวมปุ่มคัดลอกลิ้งค์)
+    setupMenuButtons(studioNames) {
+        this.menuButtonsContainer.innerHTML = ''; 
+        
+        studioNames.forEach(name => {
+            const url = `?studio=${encodeURIComponent(name)}`;
+            const fullLink = window.location.origin + window.location.pathname + url;
+            
+            // 1. สร้าง Container สำหรับปุ่ม + ไอคอน
+            const itemContainer = document.createElement('div');
+            itemContainer.className = 'studio-menu-item';
+            
+            // 2. สร้างปุ่ม Studio
+            const studioButton = document.createElement('button');
+            studioButton.className = 'neural-button';
+            studioButton.type = 'button';
+            
+            studioButton.innerHTML = `
+                <div class="button-bg"></div>
+                <span class="button-text">${name}</span> <div class="button-glow"></div>
+            `;
+
+            studioButton.addEventListener('click', () => {
+                window.open(fullLink, '_blank'); 
+            });
+            
+            itemContainer.appendChild(studioButton);
+            
+            // 3. สร้างปุ่ม/ไอคอนคัดลอกลิ้งค์
+            const copyIconButton = document.createElement('div');
+            copyIconButton.className = 'copy-icon-button';
+            copyIconButton.innerHTML = `<i class="far fa-copy"></i>`;
+            
+            copyIconButton.addEventListener('click', this._copyStudioLink);
+            
+            itemContainer.appendChild(copyIconButton);
+            
+            this.menuButtonsContainer.appendChild(itemContainer);
+        });
+    }
+
+    // --- Announcement Logic (Pure Sheets API) ---
+
+    async loadAnnouncement(action, isInitialLoad = false, control = null) {
+        
+        if (control) {
+             this.announcementControl = control;
+        }
+
+        if (!this.announcementModalOverlay) {
+             this.startCloseButtonControl(action);
+             return;
+        }
+        
+        this.isAnnouncementActive = true; 
+        this.closeAnnouncementButton.style.display = 'none'; 
+        this.countdownText.style.display = 'none'; 
+        this.closeIcon.style.display = 'none';
+
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+        
+        if (!isInitialLoad) {
+            this.announcementModalOverlay.classList.remove('show', 'initial-show');
+            this.announcementModalOverlay.style.display = 'none';
+        }
+        
+        this.announcementImage.style.display = 'none';
+        this.announcementActionArea.style.display = 'none'; 
+
+        this.announcementModalOverlay.setAttribute('data-post-action', action);
+        this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
+        
+        const result = this.announcementConfig;
+        
+        const hasImage = result.imageUrl && result.imageUrl.trim() !== '';
+        const hasButton = result.buttonText && result.buttonUrl; 
+        
+        if (!result.hasContent) {
+            this.isAnnouncementActive = false; 
+            // 🔴 ถ้าไม่มีประกาศ ให้ทำตาม Action ต่อไป
+            this.startCloseButtonControl(action);
+            return;
+        }
+
+
+        if (isInitialLoad) {
+            this.announcementModalOverlay.style.display = 'flex'; 
+            this.modalLoader.style.display = 'flex';
+            this.announcementModalOverlay.classList.add('show', 'initial-show');
+        } else {
+            this.announcementModalOverlay.style.display = 'flex'; 
+            this.modalLoader.style.display = 'flex';
+            setTimeout(() => {
+                 this.announcementModalOverlay.classList.add('show');
+            }, 50);
+        }
+        
+        if (hasImage) {
+            this.announcementImage.src = result.imageUrl.trim(); 
+        } else {
+            this.modalLoader.style.display = 'none'; 
+            this.announcementModalOverlay.classList.remove('initial-show'); 
+            this.startCloseButtonControl(action); 
+        }
+        
+        if (hasButton) {
+            this.announcementActionArea.style.display = 'block';
+            this.announcementActionButton.style.display = 'flex';
+            this.announcementActionButton.querySelector('.button-text').textContent = result.buttonText.trim();
+            this.announcementActionButton.setAttribute('data-url', result.buttonUrl.trim());
+            this.announcementActionButton.addEventListener('click', this._onAnnouncementButtonClick);
+        }
+    }
+    
+    // --- Close Button Control ---
+    startCloseButtonControl(action) {
+        if (!this.announcementModalOverlay) {
+             if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
+             else if (action === 'bypass_redirect') { window.open(this.bypassUrl, '_self'); } 
+             else { this.continueAppFlow(); }
+             return;
+        }
+        
+        this.announcementModalOverlay.setAttribute('data-post-action', action);
+        
+        if (!this.isAnnouncementActive) {
+             if (action === 'geofence_check') { this.showGeofenceChecker(); this.checkGeolocation(); } 
+             else if (action === 'bypass_redirect') { window.open(this.bypassUrl, '_self'); } 
+             else { this.continueAppFlow(); }
+             return;
+        }
+        
+        if (this.announcementControl.hideCloseBtn) {
+            this.closeAnnouncementButton.style.display = 'none';
+            this.countdownText.style.display = 'none';
+            this.closeIcon.style.display = 'none';
+            
+        } else if (this.announcementControl.countdownSec > 0) {
+            let remaining = this.announcementControl.countdownSec;
+            
+            this.closeAnnouncementButton.style.display = 'flex'; 
+            this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
+            this.countdownText.style.display = 'block'; 
+
+            // 🔴 FIX 2: ปิด Event Listener ชั่วคราวเมื่อนับถอยหลัง
+            this.closeAnnouncementButton.style.pointerEvents = 'none';
+            
+            this.countdownInterval = setInterval(() => {
+                this.countdownText.textContent = remaining; 
+                remaining--;
+
+                if (remaining < 0) {
+                    clearInterval(this.countdownInterval);
+                    this.countdownInterval = null;
+                    
+                    this.countdownText.style.display = 'none'; 
+                    this.closeIcon.style.display = 'block'; 
+                    
+                    // 🔴 FIX 2: เปิด Event Listener เมื่อนับเสร็จ
+                    this.closeAnnouncementButton.style.pointerEvents = 'auto';
+                }
+            }, 1000);
+            
+        } else {
+            this.closeAnnouncementButton.style.display = 'flex'; 
+            this.closeIcon.style.display = 'block';
+            this.countdownText.style.display = 'none';
+            this.closeAnnouncementButton.style.pointerEvents = 'auto'; // เปิดใช้งานปกติ
+        }
+    }
+
+    closeAnnouncementModal() {
+        this.announcementModalOverlay.classList.remove('show', 'initial-show');
+        this.announcementActionButton.removeEventListener('click', this._onAnnouncementButtonClick);
+        
+        if (this.countdownInterval) {
+            clearInterval(this.countdownInterval);
+            this.countdownInterval = null;
+        }
+        this.isAnnouncementActive = false;
+        
+        const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+        
+        setTimeout(() => {
+            this.announcementModalOverlay.style.display = 'none';
+            this.countdownText.style.display = 'none'; 
+            
+            if (postAction === 'bypass_redirect' && this.bypassUrl) {
+                window.open(this.bypassUrl, '_self'); 
+            } else if (postAction === 'geofence_check') {
+                this.showGeofenceChecker();
+                this.checkGeolocation();
+            } else if (postAction === 'main_menu') {
+                // 🔴 FIX 4: Modal Auth จะถูกเรียกใน init() หรือเมื่อปิดประกาศ
+                this.showAdminAuthModal();
+            }
+        }, 300); 
+    }
+
+    // --- Geofencing Logic (with 2-second delay and Retry Fix) ---
+
+    checkGeolocation() {
+        // 🔴 เมื่อมีการกดปุ่ม ลองใหม่อีกครั้ง / เริ่มต้น ให้ตั้งค่าปุ่มกลับเป็นสถานะปกติก่อน
+        this._setRetryToGeolocationCheck(); 
+        
+        if (this.target.lat === null) {
+             this.updateStatus('error', 'การตั้งค่า Geofence ผิดพลาด', 'ไม่พบพิกัดเป้าหมาย (โปรดตรวจสอบ K1-K3)');
+             this.retryButton.style.display = 'flex';
+             return;
+        }
+        
+        // 1. แสดงสถานะ Loading ทันที
+        this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
+        this.retryButton.style.display = 'none'; 
+
+        // 🔴 FIX 4: เพิ่ม setTimeout 2000ms (2 วินาที) ก่อนเรียก GPS API 🔴
+        setTimeout(() => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => this.geoSuccess(position),
+                    (error) => this.geoError(error), 
+                    // 🟢 FIX 5: ตั้งค่า maximumAge เป็น 5 นาที (300000ms) เพื่ออนุญาตให้ใช้ Cache
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
+                );
+            } else {
+                this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
+            }
+        }, 2000); // 👈 หน่วงเวลา 2 วินาที
+    }
+    
+    geoSuccess(position) {
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
+        const distanceMeters = (distance * 1000).toFixed(0);
+
+        if (distance <= this.target.dist) {
+            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
+            setTimeout(() => {
+                 window.open(this.target.url, '_self'); 
+            }, 1000);
+
+        } else {
+            const maxMeters = this.target.dist * 1000;
+            this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
+        }
+    }
+    
+    geoError(error) {
+        let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
+        let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
+
+        // 🔴 เมื่อเกิด Error ใดๆ ให้ใช้ปุ่ม "ลองใหม่อีกครั้ง" ตามปกติ 🔴
+        this._setRetryToGeolocationCheck(); 
+
+        if (error.code === 1) {
+            errorMessage += ' (ถูกปฏิเสธ)';
+        } else if (error.code === 2) {
+            errorMessage += ' (ไม่พบตำแหน่ง)';
+        } else if (error.code === 3) {
+            errorMessage += ' (หมดเวลาค้นหา)';
+        }
+        
+        this.updateStatus('error', errorMessage, customMessage);
+        this.retryButton.style.display = 'flex'; 
+    }
+    
+    calculateDistance(lat1, lon1, lat2, lon2) {
+        function toRad(Value) { return Value * Math.PI / 180; }
+        const R = 6371;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const lat1Rad = toRad(lat1);
+        const lat2Rad = toRad(lat2);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad); 
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+        return R * c;
+    }
+
+    updateStatus(type, title, message) {
+        this.geofenceChecker.classList.remove('loading', 'error', 'success');
+        this.geofenceChecker.classList.add(type);
+
+        this.statusTitle.textContent = title;
+        this.statusMessage.textContent = message;
+        
+        if (type === 'loading') {
+            this.statusIconContainer.innerHTML = '<svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle></svg>';
+            this.retryButton.style.display = 'none';
+        } else if (type === 'error') {
+            this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+            this.retryButton.style.display = 'flex';
+        } else if (type === 'success') {
+            this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+            this.retryButton.style.display = 'none';
+        }
+    }
+    
+    showErrorScreen(message) {
+         document.body.style.overflow = 'auto'; 
+         this.geofenceChecker.style.display = 'flex';
+         this.mainContainerWrapper.style.display = 'flex';
+         this.mainMenuCard.style.display = 'none';
+         this.updateStatus('error', 'ข้อผิดพลาดร้ายแรง', message);
+         this.retryButton.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new GeofenceApp();
+});
