@@ -258,40 +258,44 @@
         /* 🔴 NEW CSS: สำหรับปุ่มคัดลอกลิ้งค์ขนาดเล็ก */
         .studio-menu-item {
             position: relative;
-            margin-bottom: 20px; /* เพิ่มพื้นที่ระหว่างกลุ่มปุ่ม */
+            /* ลบ margin-bottom ออกไปเลย */
         }
         .studio-menu-item .neural-button {
             margin-bottom: 0 !important;
+            position: relative; /* ให้ปุ่มหลักเป็น reference สำหรับ absolute positioning */
+            overflow: hidden;
         }
         
-        /* 🔴 ปรับตำแหน่งไอคอนสำหรับคัดลอกและแชร์ 🔴 */
+        /* 🔴 ปรับตำแหน่งไอคอนให้อยู่ภายในปุ่มหลัก 🔴 */
         .icon-action-group {
             position: absolute;
-            bottom: -15px; /* เลื่อนลงมาเล็กน้อย */
-            right: 15px;
+            top: 0; 
+            right: 0;
             display: flex;
-            gap: 5px; /* ระยะห่างระหว่างปุ่ม */
+            gap: 0; /* ชิดติดกัน */
             z-index: 10;
         }
         
+        /* 🔴 ปรับสไตล์ปุ่มไอคอน 🔴 */
         .copy-icon-button, .share-icon-button {
-            width: 30px;
-            height: 30px;
-            background: #e2e8f0;
-            border-radius: 50%;
+            width: 45px; /* เพิ่มความกว้างให้ปุ่มไอคอน */
+            height: 55px; /* ความสูงเท่าปุ่มหลัก */
+            background: rgba(0, 0, 0, 0.4); /* สีดำจางๆ */
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 10;
         }
         .copy-icon-button:hover, .share-icon-button:hover {
-            background: #cbd5e1;
-            transform: scale(1.1);
+            background: rgba(59, 130, 246, 0.7); /* สีน้ำเงินเมื่อ hover */
+            transform: none; /* ยกเลิก transform scale */
         }
         .copy-icon-button i, .share-icon-button i {
-            color: #475569;
+            color: #ffffff; /* เปลี่ยนสีไอคอนเป็นสีขาว */
             font-size: 14px;
         }
         
