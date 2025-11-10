@@ -23,6 +23,8 @@ class GeofenceApp {
         
         // 🔴 NEW: เพิ่ม Modal Loader Text
         this.modalLoaderText = document.getElementById('modalLoaderText');
+        // 🔴 NEW: เพิ่ม Text Loader Line Element
+        this.textLoaderLine = document.getElementById('textLoaderLine');
         
         // 🔴 NEW: Floating Footer Elements
         this.countdownFooter = document.getElementById('countdownFooter');
@@ -293,6 +295,8 @@ class GeofenceApp {
                  clearInterval(this.loadTimeoutInterval);
                  this.loadTimeoutInterval = null;
                  if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+                 // 🔴 NEW: ซ่อนแถบโหลด 10s
+                 if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
              }
 
              this.modalLoader.style.display = 'none';
@@ -310,6 +314,8 @@ class GeofenceApp {
                  clearInterval(this.loadTimeoutInterval);
                  this.loadTimeoutInterval = null;
                  if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+                 // 🔴 NEW: ซ่อนแถบโหลด 10s
+                 if (this.textLoaderLine) this.textLoaderLine.style.display = 'none';
              }
              
              this.modalLoader.style.display = 'none';
@@ -456,7 +462,7 @@ class GeofenceApp {
             this.fetchAnnouncementConfigFromSheet()
         ]);
         
-        this.studioData = list;
+        this.studioData = studioList;
         this.geofenceConfig = geofenceConfig;
         this.announcementConfig = announcementConfig;
     }
@@ -622,6 +628,14 @@ class GeofenceApp {
              this.modalLoaderText.style.display = 'block';
              this.modalLoaderText.style.color = '#f8fafc';
         }
+        // 🔴 NEW: แสดงแถบโหลด 10s
+        if (this.textLoaderLine) {
+             this.textLoaderLine.style.display = 'block';
+             // 🔴 FIX: บังคับให้เริ่ม Animation ใหม่ (ถ้ามี) 
+             this.textLoaderLine.style.animation = 'none';
+             this.textLoaderLine.offsetHeight; // Trigger reflow
+             this.textLoaderLine.style.animation = 'lineGrow 10s linear infinite';
+        }
         
         this.loadTimeoutInterval = setInterval(() => {
             if (this.modalLoaderText) {
@@ -640,6 +654,8 @@ class GeofenceApp {
                      // 1. ซ่อน Loader และ text
                      this.modalLoader.style.display = 'none';
                      if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+                     // 🔴 NEW: ซ่อนแถบโหลด 10s
+                     if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
 
                      // 2. หากยังไม่มีภาพ (แสดงว่าโหลดไม่ทัน) ให้ไปควบคุมปุ่มปิดเลย
                      if (this.announcementImage.style.display === 'none') {
@@ -771,6 +787,8 @@ class GeofenceApp {
         } else {
             this.modalLoader.style.display = 'none'; 
             if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+            // 🔴 NEW: ซ่อนแถบโหลด 10s
+            if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
             this.announcementModalOverlay.classList.remove('initial-show'); 
             this.startCloseButtonControl(action); 
         }
@@ -855,6 +873,8 @@ class GeofenceApp {
              this.loadTimeoutInterval = null;
         }
         if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
+        // 🔴 NEW: ซ่อนแถบโหลด 10s
+        if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
 
 
         this.isAnnouncementActive = false;
