@@ -64,8 +64,8 @@ class GeofenceApp {
         this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC = 20; 
         this.loadTimeoutInterval = null; 
         
-        // 🔴 NEW: ตัวแปรสำหรับควบคุม Timeout 5 วินาที (สำหรับแสดงผล Geofence Status)
-        this.GEOFENCE_STATUS_DELAY_MS = 5000; 
+        // 🔴 FIX: ตัวแปรสำหรับควบคุม Timeout 2 วินาที (สำหรับแสดงผล Geofence Status)
+        this.GEOFENCE_STATUS_DELAY_MS = 2000; 
         
         // 🔴 NEW: ตัวแปรสำหรับเก็บ Timeout ID ของการแสดงปุ่ม Retry/Redirect
         this.geofenceTimeoutId = null; 
@@ -886,7 +886,7 @@ class GeofenceApp {
         }, 300); 
     }
 
-    // --- Geofencing Logic (with 5-second delay and Retry Fix) ---
+    // --- Geofencing Logic (with 2-second delay on loading status) ---
 
     checkGeolocation() {
         this._setRetryToGeolocationCheck(); 
@@ -899,34 +899,34 @@ class GeofenceApp {
         
         if (this.target.lat === null) {
              this.updateStatus('error', 'การตั้งค่า Geofence ผิดพลาด', 'ไม่พบพิกัดเป้าหมาย (โปรดตรวจสอบ K1-K3)');
-             // 🔴 FIX: ใช้ delay ก่อนแสดงปุ่ม Retry
+             // 🔴 FIX: ใช้ delay ก่อนแสดงปุ่ม Retry (2 วินาที)
              this.geofenceTimeoutId = setTimeout(() => {
                  this.retryButton.style.display = 'flex';
              }, this.GEOFENCE_STATUS_DELAY_MS);
              return;
         }
         
-        // 1. แสดงสถานะ Loading ทันที
+        // 1. แสดงสถานะ Loading ทันที (กำลังตรวจสอบ)
         this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
         this.retryButton.style.display = 'none'; 
-
-        // 🔴 FIX 4: เพิ่ม setTimeout 100ms ก่อนเรียก GPS API (ลดดีเลย์)
-        setTimeout(() => {
+        
+        // --- ขั้นตอนที่ 1: รอ 2 วินาที (Loading Delay) ---
+        this.geofenceTimeoutId = setTimeout(() => {
+            
+            // 2. เรียกใช้ Geolocation API (หลังจาก 2 วินาที)
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (position) => this.geoSuccess(position),
+                    (position) => this.geoSuccess(position), 
                     (error) => this.geoError(error), 
-                    // 🟢 FIX 5: ตั้งค่า maximumAge เป็น 5 นาที (300000ms) เพื่ออนุญาตให้ใช้ Cache
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
                 );
             } else {
                 this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
-                // 🔴 FIX: เก็บ Timeout ID
-                this.geofenceTimeoutId = setTimeout(() => {
-                    this.retryButton.style.display = 'flex';
-                }, this.GEOFENCE_STATUS_DELAY_MS);
+                // 🔴 NEW: แสดงปุ่ม Retry ทันที (ไม่ต้องรอ delay ซ้ำ)
+                this.retryButton.style.display = 'flex';
             }
-        }, 100); 
+            
+        }, this.GEOFENCE_STATUS_DELAY_MS);
     }
     
     geoSuccess(position) {
@@ -934,22 +934,22 @@ class GeofenceApp {
         const userLon = position.coords.longitude;
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
         const distanceMeters = (distance * 1000).toFixed(0);
-
+        
+        // 🔴 NEW: ไม่ต้องหน่วงเวลาซ้ำ 2 วินาที 
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
-            // 🔴 NEW: หน่วงเวลา 5 วินาทีก่อนเปลี่ยนหน้า
+            
+            // Redirect หลังแสดงผลสำเร็จ 2 วินาที
             this.geofenceTimeoutId = setTimeout(() => {
                  window.open(this.target.url, '_self'); 
-            }, this.GEOFENCE_STATUS_DELAY_MS);
+            }, this.GEOFENCE_STATUS_DELAY_MS); 
 
         } else {
             const maxMeters = this.target.dist * 1000;
             this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
             
-            // 🔴 NEW: หน่วงเวลา 5 วินาทีก่อนแสดงปุ่ม Retry
-            this.geofenceTimeoutId = setTimeout(() => {
-                this.retryButton.style.display = 'flex';
-            }, this.GEOFENCE_STATUS_DELAY_MS);
+            // แสดงปุ่ม Retry ทันที
+            this.retryButton.style.display = 'flex';
         }
     }
     
@@ -958,7 +958,8 @@ class GeofenceApp {
         let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
 
         this._setRetryToGeolocationCheck(); 
-
+        
+        // 🔴 NEW: ไม่ต้องหน่วงเวลาซ้ำ 2 วินาที
         if (error.code === 1) {
             errorMessage += ' (ถูกปฏิเสธ)';
         } else if (error.code === 2) {
@@ -969,10 +970,8 @@ class GeofenceApp {
         
         this.updateStatus('error', errorMessage, customMessage);
         
-        // 🔴 NEW: หน่วงเวลา 5 วินาทีก่อนแสดงปุ่ม Retry
-        this.geofenceTimeoutId = setTimeout(() => {
-            this.retryButton.style.display = 'flex'; 
-        }, this.GEOFENCE_STATUS_DELAY_MS);
+        // แสดงปุ่ม Retry ทันที
+        this.retryButton.style.display = 'flex'; 
     }
     
     calculateDistance(lat1, lon1, lat2, lon2) {
@@ -1000,7 +999,7 @@ class GeofenceApp {
             this.retryButton.style.display = 'none';
         } else if (type === 'error') {
             this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
-            this.retryButton.style.display = 'none'; // ซ่อนไว้ก่อนแสดง delay
+            this.retryButton.style.display = 'none'; 
         } else if (type === 'success') {
             this.statusIconContainer.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
             this.retryButton.style.display = 'none';
