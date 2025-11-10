@@ -92,8 +92,6 @@ class GeofenceApp {
         
         this.pageTitle.textContent = 'ประกาศ'; 
         
-        this.closeAnnouncementButton.style.display = 'none'; 
-        
         document.body.classList.add('light-mode');
         document.body.classList.remove('dark-mode'); 
         document.body.style.backgroundColor = '#f8fafc';
