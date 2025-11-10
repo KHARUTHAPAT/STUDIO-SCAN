@@ -13,24 +13,26 @@
     
     <style>
         /* 🔴 NEW CSS: Circle Loader & Text Loader Styles 🔴 */
-        .circle-loader {
+        /* --- Circle Loader --- */
+        .circle-loader-spin {
             position: relative;
-            width: 60px; /* ปรับขนาดให้เล็กลง */
-            height: 60px; /* ปรับขนาดให้เล็กลง */
-            margin-bottom: 20px;
+            width: 60px; 
+            height: 60px; 
         }
 
-        .circle-loader:before,
-        .circle-loader:after {
+        .circle-loader-spin:before,
+        .circle-loader-spin:after {
             content: '';
             border-radius: 50%;
             position: absolute;
             inset: 0;
-            box-shadow: 0 0 10px 2px rgba(0, 0, 0, 0.3) inset;
+            /* ปรับ Shadow สีดำจาง ๆ ให้เข้ากับ Theme */
+            box-shadow: 0 0 5px 1px rgba(0, 0, 0, 0.4) inset;
         }
 
-        .circle-loader:after {
-            box-shadow: 0 2px 0 #3b82f6 inset; /* ใช้สีฟ้าตาม Brand */
+        .circle-loader-spin:after {
+            /* ใช้สีน้ำเงิน #3b82f6 ของ Theme แทน #2196F3 */
+            box-shadow: 0 4px 0 #3b82f6 inset; 
             animation: rotate 2s linear infinite;
         }
 
@@ -38,7 +40,8 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
+        
+        /* --- Text Loader (สำหรับ Modal ประกาศ 10s Timeout) --- */
         .text-loader-container {
             position: relative;
             display: inline-block;
@@ -46,16 +49,24 @@
             color: #FFF;
         }
         
-        /* 🔴 Text Loader Line Style (ใช้สำหรับ Modal ประกาศ) */
+        #modalLoaderText {
+             font-size: 0.95rem;
+             font-weight: 500;
+             color: #f8fafc;
+             display: inline-block;
+             padding-bottom: 5px; /* เว้นระยะสำหรับเส้นข้างล่าง */
+             position: relative;
+             overflow: hidden;
+        }
+
         .text-loader-line {
-            content: '';
             height: 3px;
             width: 100%;
-            background: #3b82f6; 
+            background: #3b82f6; /* สีฟ้าตาม Brand */
             transform: scaleX(0);
             transform-origin: left;
             display: block;
-            animation: lineGrow 10s linear infinite; 
+            animation: lineGrow 10s linear infinite; /* ใช้เวลา 10 วินาที */
             position: absolute;
             bottom: 0;
             left: 0;
@@ -113,19 +124,14 @@
             font-size: 1rem;
             margin-bottom: 20px;
         }
-        /* 🔴 FIX: ใช้ Spinner Class ใหม่ */
+        /* 🔴 FIX: ปรับขนาด Icon Container ให้รองรับ Circle Loader */
         .status-icon {
-            width: 80px;
-            height: 80px;
+            width: 60px; 
+            height: 60px; 
             margin-bottom: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .status-icon svg {
-            color: #3b82f6; 
-            width: 100%;
-            height: 100%;
         }
 
         /* เมนูแอดมิน */
@@ -276,6 +282,9 @@
              margin-top: 15px;
              text-align: center;
              font-weight: 500;
+             /* 🔴 ปรับให้ Text Loader ทำงาน */
+             padding-bottom: 5px;
+             position: relative;
         }
 
         /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
@@ -310,14 +319,11 @@
             margin-bottom: 0 !important;
             position: relative; 
             overflow: hidden;
-            border-radius: 0;
+            border-radius: 12px 12px 0 0 !important; /* FIX: ให้ปุ่มหลักโค้งด้านบน */
             min-height: 60px;
         }
-        .studio-menu-item .neural-button:first-child {
-             border-radius: 12px 12px 0 0 !important; 
-        }
         
-        /* 🔴 ปรับตำแหน่งไอคอนให้อยู่ภายในปุ่มหลัก 🔴 */
+        /* 🔴 FIX: ปรับสไตล์ปุ่มไอคอน (ใช้ CSS ที่ปรับปรุงแล้ว) 🔴 */
         .icon-action-group {
             position: absolute;
             top: 0; 
@@ -327,27 +333,29 @@
             z-index: 10;
         }
         
-        /* 🔴 ปรับสไตล์ปุ่มไอคอน 🔴 */
         .copy-icon-button, .share-icon-button {
             width: 45px; 
-            height: 55px; 
-            background: rgba(0, 0, 0, 0.4); 
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            height: 60px; /* FIX: ความสูงเท่าปุ่มหลัก */
+            background: rgba(0, 0, 0, 0.0); /* 🔴 FIX: ทำให้พื้นหลังโปร่งใส */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
             z-index: 10;
+            /* 🔴 FIX: ให้ขอบมุมโค้งด้านนอกสุดของปุ่ม Studio ดูดี */
         }
         .copy-icon-button:hover, .share-icon-button:hover {
-            background: rgba(59, 130, 246, 0.7); 
+            background: rgba(59, 130, 246, 0.4); /* ให้มีสีจางๆ เมื่อ Hover เท่านั้น */
             transform: none; 
         }
+        /* 🔴 FIX: เปลี่ยนสีไอคอนเป็นสีขาวเพื่อให้เห็นบนปุ่มดำ */
         .copy-icon-button i, .share-icon-button i {
-            color: #ffffff; 
-            font-size: 14px;
+            color: #f8fafc; 
+            font-size: 16px;
+            filter: drop-shadow(0 0 1px rgba(0,0,0,0.8));
         }
         
         /* 🔴 FIX: เพิ่ม margin ให้ปุ่มยืนยันใน Modal Auth */
@@ -384,8 +392,7 @@
             width: 50%;
             min-height: 40px; 
             margin-bottom: 0 !important;
-            /* 🔴 FIX: ทำให้มุมโค้งมนทุกด้าน */
-            border-radius: 0 !important; 
+            border-radius: 0 !important;
             /* สไตล์สำหรับแถบสีเทา */
             background: #e2e8f0 !important;
             border: none;
@@ -436,9 +443,7 @@
              <div class="ai-glow"></div>
             
             <div class="status-icon" id="statusIcon">
-                <svg id="loadingIcon" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" fill="none" stroke="currentColor" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
-                </svg>
+                <div class="circle-loader-spin"></div>
             </div>
             
             <h1 id="statusTitle">กำลังตรวจสอบตำแหน่ง Studio...</h1> 
@@ -464,12 +469,9 @@
             </div>
             
             <div id="modalLoader" style="position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
-                <div class="status-icon" style="width: 60px; height: 60px; margin-bottom: 5px;">
-                     <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="50" cy="50" fill="none" stroke="#3b82f6" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
-                    </svg>
-                </div>
+                <div class="circle-loader-spin"></div>
                 <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
+                <div id="textLoaderLine" style="display:none;" class="text-loader-line"></div>
             </div>
             
             <div class="modal-body">
