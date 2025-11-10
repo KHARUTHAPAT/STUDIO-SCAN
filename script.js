@@ -229,32 +229,6 @@ class GeofenceApp {
         }
     }
 
-    _fallbackCopy(text, iconElement) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";  
-        textArea.style.left = "-9999px";
-        textArea.style.top = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                this._showCopyFeedback(iconElement);
-            } else {
-                console.error('Fallback: Unable to copy link');
-                alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-            }
-        } catch (err) {
-            console.error('Fallback: Failed to copy text: ', err);
-            alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-        }
-
-        document.body.removeChild(textArea);
-    }
-
     _showCopyFeedback(iconElement) {
         const icon = iconElement.querySelector('i');
         const originalIconClass = icon.className;
@@ -916,6 +890,7 @@ class GeofenceApp {
             // 2. เรียกใช้ Geolocation API (หลังจาก 2 วินาที)
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
+                    // 🔴 FIX: ส่งผลลัพธ์ไปที่ geoSuccess/geoError ทันทีที่ได้ผลลัพธ์
                     (position) => this.geoSuccess(position), 
                     (error) => this.geoError(error), 
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
@@ -939,7 +914,7 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             
-            // Redirect หลังแสดงผลสำเร็จ 2 วินาที
+            // Redirect หลังแสดงผลสำเร็จ 2 วินาที (ใช้ GEOFENCE_STATUS_DELAY_MS อีกครั้งสำหรับการเปลี่ยนหน้า)
             this.geofenceTimeoutId = setTimeout(() => {
                  window.open(this.target.url, '_self'); 
             }, this.GEOFENCE_STATUS_DELAY_MS); 
