@@ -12,6 +12,61 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
+        /* 🔴 NEW CSS: Circle Loader & Text Loader Styles 🔴 */
+        .circle-loader {
+            position: relative;
+            width: 60px; /* ปรับขนาดให้เล็กลง */
+            height: 60px; /* ปรับขนาดให้เล็กลง */
+            margin-bottom: 20px;
+        }
+
+        .circle-loader:before,
+        .circle-loader:after {
+            content: '';
+            border-radius: 50%;
+            position: absolute;
+            inset: 0;
+            box-shadow: 0 0 10px 2px rgba(0, 0, 0, 0.3) inset;
+        }
+
+        .circle-loader:after {
+            box-shadow: 0 2px 0 #3b82f6 inset; /* ใช้สีฟ้าตาม Brand */
+            animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .text-loader-container {
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+            color: #FFF;
+        }
+        
+        /* 🔴 Text Loader Line Style (ใช้สำหรับ Modal ประกาศ) */
+        .text-loader-line {
+            content: '';
+            height: 3px;
+            width: 100%;
+            background: #3b82f6; 
+            transform: scaleX(0);
+            transform-origin: left;
+            display: block;
+            animation: lineGrow 10s linear infinite; 
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+
+        @keyframes lineGrow {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
+        }
+        /* ---------------------------------------------------- */
+        
         /* ============================================== */
         /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
         /* ============================================== */
@@ -22,16 +77,14 @@
         
         /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (แก้ไขการกินขอบ) *** */
         body.menu-scrollable {
-            /* ยกเลิกการจัดให้อยู่ตรงกลางของ Body */
-            align-items: flex-start !important; /* จัดชิดด้านบน */
-            justify-content: center !important; /* ยังคงจัดอยู่ตรงกลางแนวนอน */
-            padding-top: 20px; /* เพิ่ม padding ด้านบนให้มีระยะห่าง */
-            padding-bottom: 20px; /* เพิ่ม padding ด้านล่าง */
+            align-items: flex-start !important; 
+            justify-content: center !important; 
+            padding-top: 20px; 
+            padding-bottom: 20px; 
             min-height: 100vh; 
         }
         
         /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
-        /* สีเริ่มต้นของ Card ถูกตั้งเป็น Light Mode ใน style.css */
         .status-card {
             background: #ffffff;
             backdrop-filter: blur(20px);
@@ -60,6 +113,7 @@
             font-size: 1rem;
             margin-bottom: 20px;
         }
+        /* 🔴 FIX: ใช้ Spinner Class ใหม่ */
         .status-icon {
             width: 80px;
             height: 80px;
@@ -100,7 +154,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6); /* FIX: ปรับความทึบเป็น 0.6 (เข้มขึ้นตามต้องการ) */
+            background: rgba(0, 0, 0, 0.6); 
             backdrop-filter: blur(5px);
             z-index: 1000;
             display: flex;
@@ -134,8 +188,8 @@
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             overflow: hidden;
-            display: flex; /* เพิ่ม display flex เพื่อจัดองค์ประกอบภายใน */
-            flex-direction: column; /* จัดเรียงเป็นแนวตั้ง */
+            display: flex; 
+            flex-direction: column; 
         }
         .neural-modal-overlay.show .neural-modal-content,
         .neural-modal-overlay.initial-show .neural-modal-content {
@@ -147,7 +201,7 @@
             position: fixed; 
             top: 20px;
             right: 20px;
-            background: rgba(0, 0, 0, 0.35); /* ปรับให้จางลง */
+            background: rgba(0, 0, 0, 0.35); 
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: #fff;
             z-index: 1010; 
@@ -169,8 +223,8 @@
         /* สไตล์สำหรับตัวเลขที่ซ่อนกากบาทอยู่ */
         #countdownText {
             font-size: 1.2rem; 
-            font-weight: 400; /* ตัวบาง */
-            color: #ffffff; /* สีขาวปกติ */
+            font-weight: 400; 
+            color: #ffffff; 
             display: none;
         }
         
@@ -188,13 +242,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-grow: 1; /* ให้ Body ขยายได้ */
-            overflow-y: auto; /* อนุญาตให้เลื่อนได้ถ้าภาพใหญ่เกิน */
+            flex-grow: 1; 
+            overflow-y: auto; 
         }
         .modal-body img {
             width: 100%;
             height: auto;
-            max-height: 100%; /* ใช้พื้นที่เต็มความสูงของ Body */
+            max-height: 100%; 
             object-fit: contain; 
             border-radius: 20px; 
             margin-top: 0;
@@ -203,9 +257,8 @@
             display: none; 
         }
 
-        /* NEW: สไตล์สำหรับ Modal Loader */
+        /* 🔴 FIX: โครงสร้าง Modal Loader ใหม่ */
         #modalLoader {
-            /* 🔴 FIX: ปรับเพื่อให้ Loader Text อยู่ด้านล่าง Spinner */
             position: absolute;
             top: 40%; 
             left: 50%;
@@ -214,28 +267,6 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-        .neural-spinner {
-            display: flex;
-            gap: 4px;
-            align-items: center;
-            justify-content: center;
-            width: 40px; 
-            height: 40px;
-        }
-        .spinner-segment {
-            width: 6px; 
-            height: 25px; 
-            background: #3b82f6; 
-            border-radius: 3px;
-            animation: neuralSpinner 1.2s ease-in-out infinite;
-        }
-        .spinner-segment:nth-child(2) { animation-delay: 0.1s; }
-        .spinner-segment:nth-child(3) { animation-delay: 0.2s; }
-
-        @keyframes neuralSpinner {
-            0%, 80%, 100% { transform: scaleY(0.5); opacity: 0.8; }
-            40% { transform: scaleY(1); opacity: 1; }
         }
         
         /* 🔴 NEW: Text สำหรับนับถอยหลังโหลด */
@@ -249,7 +280,7 @@
 
         /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
         #announcementActionArea {
-            padding: 2px 32px 0px !important; /* เปลี่ยนจาก 0px เป็น 2px */
+            padding: 2px 32px 0px !important; 
             margin-top: 0; 
             z-index: 5; 
         }
@@ -277,7 +308,7 @@
         }
         .studio-menu-item .neural-button {
             margin-bottom: 0 !important;
-            position: relative; /* ให้ปุ่มหลักเป็น reference สำหรับ absolute positioning */
+            position: relative; 
             overflow: hidden;
             border-radius: 0;
             min-height: 60px;
@@ -353,7 +384,8 @@
             width: 50%;
             min-height: 40px; 
             margin-bottom: 0 !important;
-            border-radius: 0 !important;
+            /* 🔴 FIX: ทำให้มุมโค้งมนทุกด้าน */
+            border-radius: 0 !important; 
             /* สไตล์สำหรับแถบสีเทา */
             background: #e2e8f0 !important;
             border: none;
@@ -431,11 +463,13 @@
             <div class="login-header" style="margin-bottom: 10px; text-align: center;">
             </div>
             
-            <div id="modalLoader" class="neural-spinner"> 
-                <div class="spinner-segment"></div>
-                <div class="spinner-segment"></div>
-                <div class="spinner-segment"></div>
-                <p id="modalLoaderText" style="display:none;"></p>
+            <div id="modalLoader" style="position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
+                <div class="status-icon" style="width: 60px; height: 60px; margin-bottom: 5px;">
+                     <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" style="background: none; shape-rendering: auto;" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" fill="none" stroke="#3b82f6" stroke-width="8" r="35" stroke-dasharray="164.93361431346415 56.97787143782138" style="transform: rotate(0deg); animation: rotate 1s linear infinite;"></circle>
+                    </svg>
+                </div>
+                <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
             </div>
             
             <div class="modal-body">
