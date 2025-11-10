@@ -231,32 +231,6 @@ class GeofenceApp {
         }
     }
 
-    _fallbackCopy(text, iconElement) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";  
-        textArea.style.left = "-9999px";
-        textArea.style.top = "-9999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-
-        try {
-            const successful = document.execCommand('copy');
-            if (successful) {
-                this._showCopyFeedback(iconElement);
-            } else {
-                console.error('Fallback: Unable to copy link');
-                alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-            }
-        } catch (err) {
-            console.error('Fallback: Failed to copy text: ', err);
-            alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
-        }
-
-        document.body.removeChild(textArea);
-    }
-
     _showCopyFeedback(iconElement) {
         const icon = iconElement.querySelector('i');
         const originalIconClass = icon.className;
@@ -543,8 +517,6 @@ class GeofenceApp {
         setTimeout(() => {
             document.body.classList.add('light-mode'); 
             document.body.classList.remove('dark-mode'); 
-            document.body.style.backgroundColor = '#f8fafc'; 
-            
             this.mainContainerWrapper.style.display = 'flex'; 
             this.mainMenuCard.style.display = 'none';
             this.geofenceChecker.style.display = 'flex';
@@ -925,7 +897,7 @@ class GeofenceApp {
 
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
-            // 🔴 NEW: หน่วงเวลา 5 วินาทีก่อนเปลี่ยนหน้า (รวมกับ 1000ms เดิม)
+            // 🔴 NEW: หน่วงเวลา 5 วินาทีก่อนเปลี่ยนหน้า
             setTimeout(() => {
                  window.open(this.target.url, '_self'); 
             }, this.GEOFENCE_STATUS_DELAY_MS);
