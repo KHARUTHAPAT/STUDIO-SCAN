@@ -783,16 +783,16 @@ class GeofenceApp {
         
         let hasGeofenceControl = false;
 
-        if (studioEntry) {
+        // 🔴 FIX: ถ้าเป็น 'main_menu' ให้ถือว่าไม่มีเกณฑ์ (ปิด Modal ทันที)
+        if (action === 'main_menu') {
+            hasGeofenceControl = false; 
+        } else if (studioEntry) {
             hasGeofenceControl = studioEntry.hideCloseBtn || studioEntry.countdownSec > 0;
-        } else if (action === 'main_menu') {
-            // สำหรับหน้าเมนูหลัก (ถ้าไม่มี Studio Name) ให้ถือว่าไม่มีเกณฑ์ (ปิดได้ปกติ)
-            hasGeofenceControl = false;
         }
         
         
         if (!hasGeofenceControl) {
-            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E ให้ปิด Modal ทันที
+            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E (สำหรับหน้า Studio) หรือเป็นหน้า Main Menu ให้ปิด Modal ทันที
             this.closeAnnouncementModal();
             return;
         }
