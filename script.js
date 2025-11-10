@@ -175,18 +175,7 @@ class GeofenceApp {
     }
     
     _setRetryToGeolocationCheck() {
-        const newButton = this.retryButton.cloneNode(true);
-        this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
-        this.retryButton = newButton; 
-        
-        // 🔴 FIX: เมื่อกดปุ่ม ให้เคลียร์ Timeout เดิมก่อนเริ่มตรวจสอบใหม่
-        this.retryButton.addEventListener('click', () => {
-            if (this.geofenceTimeoutId) {
-                clearTimeout(this.geofenceTimeoutId);
-                this.geofenceTimeoutId = null;
-            }
-            this.checkGeolocation();
-        });
+        // 🔴 FIX: เปลี่ยนเป็นแค่ตั้งค่าข้อความเริ่มต้นเท่านั้น (ไม่ replace ปุ่ม)
         this.retryButton.querySelector('.button-text').textContent = 'ลองใหม่อีกครั้ง';
     }
     
@@ -281,7 +270,17 @@ class GeofenceApp {
     }
 
     bindEvents() {
-        this._setRetryToGeolocationCheck(); 
+        // 🔴 FIX: ผูก Event Listener สำหรับปุ่ม Retry ครั้งเดียวใน Init
+        if (this.retryButton) {
+            this.retryButton.addEventListener('click', () => {
+                // เคลียร์ Timeout เดิมเมื่อกดปุ่มทันที
+                if (this.geofenceTimeoutId) {
+                    clearTimeout(this.geofenceTimeoutId);
+                    this.geofenceTimeoutId = null;
+                }
+                this.checkGeolocation();
+            });
+        }
         
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
