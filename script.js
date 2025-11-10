@@ -229,6 +229,32 @@ class GeofenceApp {
         }
     }
 
+    _fallbackCopy(text, iconElement) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";  
+        textArea.style.left = "-9999px";
+        textArea.style.top = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                this._showCopyFeedback(iconElement);
+            } else {
+                console.error('Fallback: Unable to copy link');
+                alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
+            }
+        } catch (err) {
+            console.error('Fallback: Failed to copy text: ', err);
+            alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
+        }
+
+        document.body.removeChild(textArea);
+    }
+
     _showCopyFeedback(iconElement) {
         const icon = iconElement.querySelector('i');
         const originalIconClass = icon.className;
@@ -282,8 +308,6 @@ class GeofenceApp {
              this.modalLoader.style.display = 'none';
              this.announcementImage.style.display = 'block';
              
-             this.announcementModalOverlay.classList.remove('initial-show');
-             
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
         });
@@ -297,10 +321,6 @@ class GeofenceApp {
              }
              
              this.modalLoader.style.display = 'none';
-             
-             this.announcementModalOverlay.classList.remove('initial-show');
-             
-             this.announcementImage.style.display = 'none'; 
              
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
              this.startCloseButtonControl(postAction);
@@ -785,6 +805,15 @@ class GeofenceApp {
              return;
         }
         
+        const hasGeofenceControl = this.announcementControl.hideCloseBtn || this.announcementControl.countdownSec > 0;
+        
+        if (!hasGeofenceControl) {
+            // 🔴 NEW LOGIC: ถ้าไม่มีเกณฑ์ D/E (hideCloseBtn หรือ countdownSec) ให้ปิด Modal ทันที
+            this.closeAnnouncementModal();
+            return;
+        }
+
+
         if (this.announcementControl.hideCloseBtn) {
             this.closeAnnouncementButton.style.display = 'none';
             this.countdownText.style.display = 'none';
@@ -793,7 +822,7 @@ class GeofenceApp {
         } else if (this.announcementControl.countdownSec > 0) {
             let remaining = this.announcementControl.countdownSec;
             
-            this.closeAnnouncementButton.style.display = 'flex'; 
+            this.closeAnnouncementButton.style.display = 'flex'; // 🔴 แสดงปุ่ม
             this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
             this.countdownText.style.display = 'block'; 
 
@@ -817,7 +846,7 @@ class GeofenceApp {
             }, 1000);
             
         } else {
-            this.closeAnnouncementButton.style.display = 'flex'; 
+            this.closeAnnouncementButton.style.display = 'flex'; // 🔴 แสดงปุ่ม
             this.closeIcon.style.display = 'block';
             this.countdownText.style.display = 'none';
             this.closeAnnouncementButton.style.pointerEvents = 'auto'; // เปิดใช้งานปกติ
@@ -890,7 +919,6 @@ class GeofenceApp {
             // 2. เรียกใช้ Geolocation API (หลังจาก 2 วินาที)
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    // 🔴 FIX: ส่งผลลัพธ์ไปที่ geoSuccess/geoError ทันทีที่ได้ผลลัพธ์
                     (position) => this.geoSuccess(position), 
                     (error) => this.geoError(error), 
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
