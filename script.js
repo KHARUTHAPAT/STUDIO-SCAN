@@ -63,7 +63,7 @@ class GeofenceApp {
         this.ANNOUNCEMENT_IMAGE_BASE_URL = 'https://i.ibb.co/';
         
         // 🔴 NEW: ตัวแปรสำหรับควบคุม Timeout 20 วินาที
-        this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC = 20; // 🔴 แก้ไข: 10 -> 20
+        this.ANNOUNCEMENT_LOAD_TIMEOUT_SEC = 20; 
         this.loadTimeoutInterval = null; 
 
         // Geofencing Parameters
