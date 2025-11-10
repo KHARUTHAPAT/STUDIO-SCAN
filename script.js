@@ -31,8 +31,9 @@ class GeofenceApp {
         this.adminAuthButton = document.getElementById('adminAuthButton');
         this.adminAuthError = document.getElementById('adminAuthError');
         
-        this.ADMIN_PASSCODE = 'admin123'; // 🔴 รหัสผ่าน Admin
-        this.isAdminAuthenticated = false; // สถานะการล็อกอิน
+        this.ADMIN_PASSCODE = 'admin123'; 
+        // 🔴 FIX: ตรวจสอบสถานะล็อกอินจาก Local Storage
+        this.isAdminAuthenticated = localStorage.getItem('admin_authenticated') === 'true'; 
 
         // =================================================================
         // *** 🔴 PURE SHEETS API V4 CONFIGURATION 🔴 ***
@@ -82,10 +83,17 @@ class GeofenceApp {
     
     // --- Authentication Logic ---
 
+    // 🔴 NEW: แสดง Modal รหัสผ่าน
     showAdminAuthModal() {
+        // ตรวจสอบ Local Storage ก่อนแสดง Modal
+        if (this.isAdminAuthenticated) {
+            this.continueAppFlow(); // ถ้าล็อกอินแล้ว ไปเมนูเลย
+            return;
+        }
+        
         this.adminAuthModalOverlay.style.display = 'flex';
         this.adminAuthModalOverlay.classList.add('show');
-        this.adminPasscodeInput.value = ''; // เคลียร์ค่าเก่า
+        this.adminPasscodeInput.value = ''; 
         this.adminPasscodeInput.focus();
     }
     
@@ -101,6 +109,9 @@ class GeofenceApp {
         const inputCode = this.adminPasscodeInput.value.trim();
         if (inputCode === this.ADMIN_PASSCODE) {
             this.isAdminAuthenticated = true;
+            // 🔴 FIX: บันทึกสถานะล็อกอินลง Local Storage
+            localStorage.setItem('admin_authenticated', 'true'); 
+            
             this.adminAuthError.style.display = 'none';
             this.hideAdminAuthModal(() => {
                 this.continueAppFlow(); // ไปที่หน้าเมนูหลัก
@@ -115,7 +126,7 @@ class GeofenceApp {
     init() {
         this.bindEvents();
         
-        // 🔴 FIX 3: ล้างประวัติ (History) ทันที เพื่อป้องกันการกด Back เมื่อเป็นหน้า Studio
+        // 🔴 FIX 3: ล้างประวัติ (History) ทันที เมื่อเป็นหน้า Studio
         if (this.studioName) {
             this.clearInitialHistory();
         }
@@ -125,12 +136,12 @@ class GeofenceApp {
              if (this.studioName) {
                  this.loadStudioFlow('geofence_check');
              } else {
-                 // 🔴 FLOW ADMIN: เมื่อเข้าหน้าหลัก: โหลดประกาศ แล้วรอ Modal Auth
-                 this.showAdminAuthModal();
-                 
+                 // 🔴 FLOW ADMIN: โหลดประกาศเสมอ
                  const initialAction = 'main_menu';
                  const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
-                 this.loadAnnouncement(initialAction, false, initialControl); 
+                 this.loadAnnouncement(initialAction, true, initialControl); 
+                 
+                 // 🔴 FIX: ไม่แสดง Modal Auth ทันที แต่รอให้ Modal ประกาศปิดก่อน
              }
         }).catch(error => {
             console.error("Fatal Error during initial config load:", error);
@@ -143,12 +154,10 @@ class GeofenceApp {
     }
     
     _setRetryToGeolocationCheck() {
-        // ใช้ cloneNode เพื่อลบ Event Listener เก่าทั้งหมด
         const newButton = this.retryButton.cloneNode(true);
         this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
-        this.retryButton = newButton; // อัปเดต Reference
+        this.retryButton = newButton; 
         
-        // กำหนด Event Listener เป็นการเรียก checkGeolocation() 
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         this.retryButton.querySelector('.button-text').textContent = 'ลองใหม่อีกครั้ง';
     }
@@ -160,9 +169,7 @@ class GeofenceApp {
         }
     }
     
-    // 🔴 NEW: คัดลอก URL ของหน้า Studio
     _copyStudioLink = (event) => {
-        // 🔴 NEW: Target คือไอคอนที่อยู่ข้าง ๆ ปุ่ม Studio
         const itemContainer = event.currentTarget.closest('.studio-menu-item');
         const studioButton = itemContainer.querySelector('.neural-button');
         
@@ -171,15 +178,13 @@ class GeofenceApp {
         const linkToCopy = window.location.origin + window.location.pathname + url;
         
         navigator.clipboard.writeText(linkToCopy).then(() => {
-            // แสดงข้อความใน Console แทน Alert
             console.log(`Link copied: ${linkToCopy}`); 
             
-            // เปลี่ยนไอคอนชั่วคราวเป็นเครื่องหมายถูก
             const iconElement = event.currentTarget.querySelector('i');
             const originalIconClass = iconElement.className;
             
             iconElement.className = 'fas fa-check';
-            iconElement.style.color = '#10b981'; // สีเขียว
+            iconElement.style.color = '#10b981'; 
             
             setTimeout(() => {
                  iconElement.className = originalIconClass;
@@ -187,7 +192,6 @@ class GeofenceApp {
             }, 1500);
         }).catch(err => {
             console.error('Failed to copy text: ', err);
-            // แสดง Alert เมื่อคัดลอกล้มเหลว
             alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
         });
     }
@@ -235,7 +239,7 @@ class GeofenceApp {
 
              if (this.announcementActionArea.style.display === 'none') { 
                  this.isAnnouncementActive = false;
-                 // 🔴 ไม่ต้องปิด Modal ถ้าเป็น Initial Load เพราะ Modal Auth เปิดอยู่
+                 // 🔴 ถ้าไม่มีประกาศ ให้ทำตาม Action ต่อไป
                  if (postAction !== 'main_menu') this.closeAnnouncementModal();
              }
              console.error("Announcement Image failed to load or permission denied.");
@@ -436,12 +440,12 @@ class GeofenceApp {
     }
 
     showGeofenceChecker() {
-        // 🔴 FIX 1: ตัดกล่องสี่เหลี่ยมว่างเปล่า โดยเปลี่ยน display ของ container หลักเป็น none ก่อน
+        // 🔴 FIX 1: ตัดกล่องสี่เหลี่ยมว่างเปล่า 
         this.mainContainerWrapper.style.display = 'none'; 
         document.body.style.overflow = 'hidden'; 
         document.body.classList.remove('menu-scrollable');
         
-        // ให้หน่วงเวลาเล็กน้อยเพื่อให้หน้าจอว่าง
+        // ให้หน่วงเวลาเล็กน้อยเพื่อให้หน้าจอว่าง ก่อนแสดง Geofence Checker
         setTimeout(() => {
             document.body.classList.add('light-mode'); 
             document.body.classList.remove('dark-mode'); 
@@ -454,7 +458,7 @@ class GeofenceApp {
 
             this.mainMenuCard.style.marginTop = '';
             document.getElementById('mainContainerWrapper').style.marginTop = '';
-        }, 50); // หน่วงเวลาเล็กน้อย
+        }, 50); 
     }
     
     // 🔴 NEW: Setup Menu Buttons (รวมปุ่มคัดลอกลิ้งค์)
@@ -539,7 +543,7 @@ class GeofenceApp {
         
         if (!result.hasContent) {
             this.isAnnouncementActive = false; 
-            // 🔴 ถ้าไม่มีประกาศ ให้ทำตาม Action ต่อไป
+            // 🔴 ถ้าไม่มีประกาศ ให้ทำตาม Action ต่อไปทันที
             this.startCloseButtonControl(action);
             return;
         }
@@ -604,7 +608,7 @@ class GeofenceApp {
             this.closeIcon.style.display = 'none'; // ซ่อนกากบาท
             this.countdownText.style.display = 'block'; 
 
-            // 🔴 FIX 2: ปิด Event Listener ชั่วคราวเมื่อนับถอยหลัง
+            // 🔴 FIX 2: ปิด Event Listener ชั่วคราวเมื่อนับถอยหลัง (ไม่ให้คลิกได้)
             this.closeAnnouncementButton.style.pointerEvents = 'none';
             
             this.countdownInterval = setInterval(() => {
@@ -653,8 +657,12 @@ class GeofenceApp {
                 this.showGeofenceChecker();
                 this.checkGeolocation();
             } else if (postAction === 'main_menu') {
-                // 🔴 FIX 4: Modal Auth จะถูกเรียกใน init() หรือเมื่อปิดประกาศ
-                this.showAdminAuthModal();
+                // 🔴 FIX 4: เมื่อปิดประกาศในหน้าหลัก: ตรวจสอบ/เรียก Modal Auth 
+                if (this.isAdminAuthenticated) {
+                    this.continueAppFlow();
+                } else {
+                    this.showAdminAuthModal();
+                }
             }
         }, 300); 
     }
