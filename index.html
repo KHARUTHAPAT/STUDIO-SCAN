@@ -7,153 +7,82 @@
     
     <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
     
-    <link rel="stylesheet" href="style.css">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
-        /* 🔴 NEW CSS: Circle Loader & Text Loader Styles 🔴 */
-        /* --- Circle Loader --- */
-        .circle-loader-spin {
-            position: relative;
-            width: 60px; 
-            height: 60px; 
+        /* ============================================== */
+        /* ***** 1. BASE / Global CSS (จาก style (2).css) ***** */
+        /* ============================================== */
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .circle-loader-spin:before,
-        .circle-loader-spin:after {
-            content: '';
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            line-height: 1.5;
+            position: relative;
+            transition: background 0.3s ease; 
+        }
+
+        /* ***** โหมด DARK (สำหรับ Geofence Checker เท่านั้น) ***** */
+        body.dark-mode {
+            background: #0a0a0f;
+        }
+        body.dark-mode .status-card {
+            background: rgba(15, 15, 20, 0.95);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        body.dark-mode .status-card h1 {
+            color: #f8fafc;
+        }
+        body.dark-mode .status-card p {
+            color: #94a3b8;
+        }
+        body.dark-mode .neural-node {
+            background: #3b82f6; 
+            opacity: 0.6;
+        }
+
+        /* ***** โหมด LIGHT (สำหรับ Menu หลัก) ***** */
+        .neural-node {
+            background: #3b82f6;
             border-radius: 50%;
-            position: absolute;
-            inset: 0;
-            /* ปรับ Shadow สีดำจาง ๆ ให้เข้ากับ Theme */
-            box-shadow: 0 0 5px 1px rgba(0, 0, 0, 0.4) inset;
+            opacity: 0.2;
+            animation: neuralPulse 4s ease-in-out infinite;
         }
 
-        .circle-loader-spin:after {
-            /* ใช้สีน้ำเงิน #3b82f6 ของ Theme แทน #2196F3 */
-            box-shadow: 0 4px 0 #3b82f6 inset; 
-            animation: rotate 2s linear infinite;
-        }
-
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* --- Text Loader (สำหรับ Modal ประกาศ 10s Timeout) --- */
-        .text-loader-container {
-            position: relative;
-            display: inline-block;
-            overflow: hidden;
-            color: #FFF;
-        }
-        
-        #modalLoaderText {
-             font-size: 0.95rem;
-             font-weight: 500;
-             color: #f8fafc;
-             display: inline-block;
-             padding-bottom: 5px; /* เว้นระยะสำหรับเส้นข้างล่าง */
-             position: relative;
-             overflow: hidden;
-        }
-
-        .text-loader-line {
-            height: 3px;
-            width: 100%;
-            background: #3b82f6; /* สีฟ้าตาม Brand */
-            transform: scaleX(0);
-            transform-origin: left;
-            display: block;
-            animation: lineGrow 10s linear infinite; /* ใช้เวลา 10 วินาที */
-            position: absolute;
-            bottom: 0;
-            left: 0;
-        }
-
-        @keyframes lineGrow {
-            0% { transform: scaleX(0); }
-            100% { transform: scaleX(1); }
-        }
-        /* ---------------------------------------------------- */
-        
-        /* ============================================== */
-        /* 1. CSS เพื่อล็อคหน้าจอไม่ให้มีการเลื่อน */
-        /* ============================================== */
-        html, body {
-            /* ลบ height: 100%; ออกเพื่อให้เนื้อหาไหลและ body ขยายได้ */
-            /* ลบ: overflow: hidden !important; */ 
-        }
-        
-        /* *** NEW: CSS สำหรับการจัดวาง Container เมื่อแสดง Menu Card (แก้ไขการกินขอบ) *** */
-        body.menu-scrollable {
-            align-items: flex-start !important; 
-            justify-content: center !important; 
-            padding-top: 20px; 
-            padding-bottom: 20px; 
-            min-height: 100vh; 
-        }
-        
-        /* CSS อื่นๆ ที่จำเป็นสำหรับ Geofencing/Status Card */
         .status-card {
             background: #ffffff;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(20px);
             border-radius: 20px;
             padding: 40px 32px;
             position: relative;
-            text-align: center;
-            width: 100%;
-            max-width: 420px;
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.3s ease; 
         }
         .status-card h1 {
-            color: #000000; 
-            font-size: 1.8rem;
-            margin-bottom: 10px;
+            color: #000000;
         }
         .status-card p {
-            color: #475569; 
-            font-size: 1rem;
-            margin-bottom: 20px;
+            color: #475569;
         }
-        /* 🔴 FIX: ปรับขนาด Icon Container ให้รองรับ Circle Loader */
-        .status-icon {
-            width: 60px; 
-            height: 60px; 
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .status-icon svg {
+            color: #3b82f6;
         }
 
-        /* เมนูแอดมิน */
-        #adminMenuButtons {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .neural-button {
-            text-decoration: none;
-            min-height: 55px;
-        }
-        
-        /* สไตล์สำหรับ Geofencing Status Card */
-        #geofenceChecker {
-            display: none;
-            width: 100%;
-        }
-        
-        /* สไตล์สำหรับ Modal (Announcement) */
+        /* Modal Announcement Styles */
         .neural-modal-overlay {
             position: fixed;
             top: 0;
@@ -170,7 +99,6 @@
             transition: opacity 0.3s ease;
             pointer-events: none;
         }
-        /* NEW: Class สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ */
         .neural-modal-overlay.initial-show {
             opacity: 1;
             pointer-events: auto;
@@ -180,11 +108,11 @@
             pointer-events: auto;
         }
         .neural-modal-content {
-            background: #000;
+            background: #000; 
             border: none;
-            padding: 0;
-            border-radius: 20px;
-            max-width: 90vw;
+            padding: 0; 
+            border-radius: 20px; 
+            max-width: 90vw; 
             width: 400px;
             height: auto;
             max-height: 90vh;
@@ -197,12 +125,10 @@
             display: flex; 
             flex-direction: column; 
         }
-        .neural-modal-overlay.show .neural-modal-content,
-        .neural-modal-overlay.initial-show .neural-modal-content {
+        .neural-modal-overlay.show .neural-modal-content {
              transform: translateY(0);
              opacity: 1;
         }
-        /* *** แก้ไข: ปรับสไตล์ของปุ่มปิดสำหรับ Countdown *** */
         .modal-close-button {
             position: fixed; 
             top: 20px;
@@ -221,94 +147,120 @@
             align-items: center;
             justify-content: center;
         }
-        .modal-close-button:hover {
-            background: #fff;
-            color: #000;
-        }
-        
-        /* สไตล์สำหรับตัวเลขที่ซ่อนกากบาทอยู่ */
-        #countdownText {
-            font-size: 1.2rem; 
-            font-weight: 400; 
-            color: #ffffff; 
-            display: none;
-        }
-        
-        /* สไตล์สำหรับกากบาท */
-        .close-icon {
-            display: block; 
-        }
-
-
         .modal-body {
             padding: 0; 
             line-height: 0; 
-            position: relative; 
-            min-height: 150px; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1; 
-            overflow-y: auto; 
         }
         .modal-body img {
             width: 100%;
             height: auto;
-            max-height: 100%; 
+            max-height: 90vh;
             object-fit: contain; 
             border-radius: 20px; 
             margin-top: 0;
         }
-        .login-header {
-            display: none; 
-        }
-
-        /* 🔴 FIX: โครงสร้าง Modal Loader ใหม่ */
-        #modalLoader {
-            position: absolute;
-            top: 40%; 
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
+        
+        /* Neural Button */
+        .neural-button {
+            width: 100%;
+            background: transparent;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            position: relative;
+            margin-bottom: 28px;
+            overflow: hidden;
+            min-height: 50px;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: center;
+        }
+        .button-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .button-text {
+            position: relative;
+            z-index: 2;
+            color: #ffffff;
+            transition: opacity 0.2s ease;
         }
         
-        /* 🔴 NEW: Text สำหรับนับถอยหลังโหลด */
-        #modalLoaderText {
-             color: #f8fafc;
-             font-size: 0.95rem;
-             margin-top: 15px;
-             text-align: center;
-             font-weight: 500;
-             /* 🔴 ปรับให้ Text Loader ทำงาน */
-             padding-bottom: 5px;
-             position: relative;
+        /* ============================================== */
+        /* ***** 2. CUSTOM/FIXED CSS (จาก Index/Script) ***** */
+        /* ============================================== */
+        
+        /* 🔴 Circle Loader & Text Loader Styles 🔴 */
+        .circle-loader-spin {
+            position: relative;
+            width: 60px; 
+            height: 60px; 
+            margin-bottom: 0;
+        }
+        .circle-loader-spin:before,
+        .circle-loader-spin:after {
+            content: '';
+            border-radius: 50%;
+            position: absolute;
+            inset: 0;
+            box-shadow: 0 0 5px 1px rgba(0, 0, 0, 0.4) inset;
+        }
+        .circle-loader-spin:after {
+            box-shadow: 0 4px 0 #3b82f6 inset; 
+            animation: rotate 2s linear infinite;
         }
 
-        /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
-        #announcementActionArea {
-            padding: 2px 32px 0px !important; 
-            margin-top: 0; 
-            z-index: 5; 
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .neural-modal-content {
-            padding-bottom: 0 !important; 
+
+        /* --- Text Loader Line (สำหรับ Modal ประกาศ 10s Timeout) --- */
+        #modalLoaderText {
+             font-size: 0.95rem;
+             color: #f8fafc;
+             margin-top: 15px;
+             font-weight: 500;
+             padding-bottom: 5px; 
+             position: relative;
+             overflow: hidden;
         }
-        /* แก้ไข: เพิ่มสไตล์เฉพาะสำหรับปุ่ม action ใน Modal ให้ชิดขอบล่าง */
-        #announcementActionButton {
-            border-radius: 0 0 20px 20px !important;
-            min-height: 55px;
+
+        .text-loader-line {
+            height: 3px;
+            width: 100%;
+            background: #3b82f6; 
+            transform: scaleX(0);
+            transform-origin: left;
+            display: block;
+            animation: lineGrow 10s linear forwards; 
+            position: absolute;
+            bottom: 0;
+            left: 0;
         }
-        .neural-modal-content {
-            padding-bottom: 0 !important; 
+
+        @keyframes lineGrow {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
         }
-        #announcementActionButton .button-bg {
-             border-radius: 0 0 20px 20px !important;
-        }
+        /* ---------------------------------------------------- */
         
-        /* 🔴 NEW CSS: สำหรับปุ่มคัดลอกลิ้งค์ขนาดเล็ก */
+        /* Menu Admin Buttons Layout */
+        #adminMenuButtons {
+            gap: 10px;
+            margin-top: 20px;
+        }
         .studio-menu-item {
             position: relative;
             margin-bottom: 20px;
@@ -319,11 +271,11 @@
             margin-bottom: 0 !important;
             position: relative; 
             overflow: hidden;
-            border-radius: 12px 12px 0 0 !important; /* FIX: ให้ปุ่มหลักโค้งด้านบน */
+            border-radius: 12px 12px 0 0 !important; 
             min-height: 60px;
         }
         
-        /* 🔴 FIX: ปรับสไตล์ปุ่มไอคอน (ใช้ CSS ที่ปรับปรุงแล้ว) 🔴 */
+        /* Icon Positioning on Main Button */
         .icon-action-group {
             position: absolute;
             top: 0; 
@@ -332,11 +284,10 @@
             gap: 0;
             z-index: 10;
         }
-        
         .copy-icon-button, .share-icon-button {
             width: 45px; 
-            height: 60px; /* FIX: ความสูงเท่าปุ่มหลัก */
-            background: rgba(0, 0, 0, 0.0); /* 🔴 FIX: ทำให้พื้นหลังโปร่งใส */
+            height: 60px; 
+            background: transparent; 
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
             display: flex;
@@ -345,44 +296,18 @@
             cursor: pointer;
             transition: all 0.2s ease;
             z-index: 10;
-            /* 🔴 FIX: ให้ขอบมุมโค้งด้านนอกสุดของปุ่ม Studio ดูดี */
         }
         .copy-icon-button:hover, .share-icon-button:hover {
-            background: rgba(59, 130, 246, 0.4); /* ให้มีสีจางๆ เมื่อ Hover เท่านั้น */
+            background: rgba(59, 130, 246, 0.4); 
             transform: none; 
         }
-        /* 🔴 FIX: เปลี่ยนสีไอคอนเป็นสีขาวเพื่อให้เห็นบนปุ่มดำ */
         .copy-icon-button i, .share-icon-button i {
             color: #f8fafc; 
             font-size: 16px;
             filter: drop-shadow(0 0 1px rgba(0,0,0,0.8));
         }
         
-        /* 🔴 FIX: เพิ่ม margin ให้ปุ่มยืนยันใน Modal Auth */
-        #adminAuthModalOverlay .neural-modal-content {
-            padding-bottom: 32px !important;
-        }
-        
-        /* 🔴 NEW CSS: สำหรับ Footer นับถอยหลังแบบลอยตัว 🔴 */
-        #countdownFooter {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.8); 
-            backdrop-filter: blur(5px);
-            z-index: 990; 
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        #countdownTimerText {
-            font-size: 0.95rem;
-            color: #fff;
-            padding: 10px;
-        }
-        
-        /* 🔴 NEW CSS: สำหรับแถบปุ่มติดกันในหน้า Menu Admin 🔴 */
+        /* Action Strip */
         .icon-action-strip {
             display: flex;
             width: 100%;
@@ -393,7 +318,6 @@
             min-height: 40px; 
             margin-bottom: 0 !important;
             border-radius: 0 !important;
-            /* สไตล์สำหรับแถบสีเทา */
             background: #e2e8f0 !important;
             border: none;
             border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -412,6 +336,25 @@
         }
         .icon-action-strip .button-text i {
              margin-right: 5px;
+        }
+        
+        /* Footer Countdown */
+        #countdownFooter {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8); 
+            backdrop-filter: blur(5px);
+            z-index: 990; 
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+        }
+        #countdownTimerText {
+            font-size: 0.95rem;
+            color: #fff;
+            padding: 10px;
+            text-align: center;
         }
     </style>
 </head>
@@ -470,8 +413,10 @@
             
             <div id="modalLoader" style="position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
                 <div class="circle-loader-spin"></div>
-                <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
-                <div id="textLoaderLine" style="display:none;" class="text-loader-line"></div>
+                <p id="modalLoaderText" style="display:none;"></p>
+                <div id="textLoaderLineContainer" style="width: 100%; margin-top: 5px;">
+                    <div id="textLoaderLine" class="text-loader-line" style="display:none;"></div>
+                </div>
             </div>
             
             <div class="modal-body">
