@@ -38,13 +38,23 @@ class GeofenceApp {
         this.adminAuthButton = document.getElementById('adminAuthButton');
         this.adminAuthError = document.getElementById('adminAuthError');
         
-        this.ADMIN_PASSCODE = 'admin123'; 
+        // 🚨 CONFIG UPDATED: ADMIN_USERS จะถูกดึงจาก Google Sheet 'Admin'!A2:B
+        this.ADMIN_USERS = []; 
+        
+        this.currentAdminName = ''; // ชื่อ Admin ที่ล็อกอินสำเร็จ
         
         // 🔴 FIX: ตรวจสอบสถานะล็อกอิน 5 นาที (300,000 มิลลิวินาที) จาก Local Storage
         const lastAuthTime = localStorage.getItem('admin_auth_time');
+        const storedAdminName = localStorage.getItem('admin_name');
+        
         this.isAdminAuthenticated = lastAuthTime && (Date.now() - parseInt(lastAuthTime) < 300000); 
-        if (!this.isAdminAuthenticated) {
+        
+        if (this.isAdminAuthenticated && storedAdminName) {
+            this.currentAdminName = storedAdminName;
+        } else {
             localStorage.removeItem('admin_auth_time');
+            localStorage.removeItem('admin_name');
+            this.currentAdminName = '';
         }
         this.authCountdownInterval = null; // ตัวแปรสำหรับเก็บ Interval ของ Auth Timer
 
@@ -56,6 +66,8 @@ class GeofenceApp {
         
         this.STUDIO_SHEET_NAME = 'Studio'; 
         this.CONFIG_SHEET_NAME = 'รวมข้อมูล'; 
+        // 🔴 NEW: ชื่อชีตสำหรับ Admin
+        this.ADMIN_SHEET_NAME = 'Admin'; 
         
         // 🔴 NEW: Base URL สำหรับรูปภาพประกาศ (ถ้าใช้ ibb.co)
         this.ANNOUNCEMENT_IMAGE_BASE_URL = 'https://i.ibb.co/';
@@ -128,10 +140,23 @@ class GeofenceApp {
     
     checkAdminPasscode() {
         const inputCode = this.adminPasscodeInput.value.trim();
-        if (inputCode === this.ADMIN_PASSCODE) {
+        let authenticatedUser = null;
+
+        // 🔴 FIX: ตรวจสอบรหัสผ่านใน ADMIN_USERS array ที่ดึงมาจาก Sheet
+        for (const user of this.ADMIN_USERS) {
+            if (inputCode === user.passcode) {
+                authenticatedUser = user;
+                break;
+            }
+        }
+
+        if (authenticatedUser) {
             this.isAdminAuthenticated = true;
-            // 🔴 FIX: บันทึก Timestamp ปัจจุบันลง Local Storage
+            this.currentAdminName = authenticatedUser.name; // เก็บชื่อผู้ดูแล
+            
+            // 🔴 FIX: บันทึก Timestamp และชื่อผู้ดูแลลง Local Storage
             localStorage.setItem('admin_auth_time', Date.now().toString()); 
+            localStorage.setItem('admin_name', authenticatedUser.name);
             
             this.adminAuthError.style.display = 'none';
             this.hideAdminAuthModal(() => {
@@ -152,7 +177,7 @@ class GeofenceApp {
             this.clearInitialHistory();
         }
         
-        // 1. โหลด Config ทั้งหมด (รวมถึงประกาศ) ก่อนเริ่ม Flow
+        // 1. โหลด Config ทั้งหมด (รวมถึงประกาศและ Admin Users) ก่อนเริ่ม Flow
         this.loadInitialConfig().then(() => {
              if (this.studioName) {
                  this.loadStudioFlow('geofence_check');
@@ -239,6 +264,24 @@ class GeofenceApp {
              icon.className = originalIconClass;
              icon.style.color = originalIconColor;
         }, 1500);
+    }
+    
+    _fallbackCopy(text, iconElement) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";  // เพื่อไม่ให้ส่งผลกระทบต่อ layout
+        textArea.style.opacity = 0;         // ซ่อนจากผู้ใช้
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            this._showCopyFeedback(iconElement);
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+            alert(`ไม่สามารถคัดลอกได้อัตโนมัติ: ${text}`);
+        }
+        document.body.removeChild(textArea);
     }
 
     bindEvents() {
@@ -424,17 +467,59 @@ class GeofenceApp {
             return { hasContent: false };
         }
     }
+    
+    // 🔴 NEW FUNCTION: ดึงชื่อผู้ดูแล (A2:A) และรหัสผ่าน (B2:B) จากชีต 'Admin'
+    async fetchAdminUsersFromSheet() {
+        // range คือ A2:B (ชื่อผู้ดูแล: A, รหัสผ่าน: B)
+        const range = `${this.ADMIN_SHEET_NAME}!A2:B`; 
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
+            
+            const users = [];
+            const values = data.values || [];
+            
+            for (let i = 0; i < values.length; i++) {
+                const row = values[i];
+                const name = row[0] ? row[0].toString().trim() : ''; // A: ชื่อผู้ดูแล
+                const passcode = row[1] ? row[1].toString().trim() : ''; // B: รหัสผ่าน
+                
+                if (name && passcode) {
+                    users.push({ name: name, passcode: passcode });
+                }
+            }
+            return users;
+        } catch (error) {
+            console.error('Error fetching Admin Users:', error);
+            // 🔴 ถ้าดึงล้มเหลว ให้กลับเป็นอาร์เรย์ว่าง เพื่อให้ระบบยังทำงานต่อได้
+            return []; 
+        }
+    }
 
     async loadInitialConfig() {
-        const [studioList, geofenceConfig, announcementConfig] = await Promise.all([
+        const [studioList, geofenceConfig, announcementConfig, adminUsers] = await Promise.all([
             this.fetchStudioListFromSheet(),
             this.fetchGeofenceConfigFromSheet(),
-            this.fetchAnnouncementConfigFromSheet()
+            this.fetchAnnouncementConfigFromSheet(),
+            // 🔴 NEW: ดึงข้อมูล Admin
+            this.fetchAdminUsersFromSheet() 
         ]);
         
         this.studioData = studioList;
         this.geofenceConfig = geofenceConfig;
         this.announcementConfig = announcementConfig;
+        // 🔴 NEW: เก็บข้อมูล Admin ที่ดึงมา
+        this.ADMIN_USERS = adminUsers;
+        
+        if (this.ADMIN_USERS.length === 0) {
+             console.warn("No Admin users loaded. Authentication will fail unless data is populated.");
+        }
     }
     
     // --- App Flow Control ---
@@ -652,7 +737,7 @@ class GeofenceApp {
                 
                 // 🔴 แจ้งเตือนและบังคับให้กลับไปล็อกอินถ้าผู้ใช้ยังอยู่หน้า Menu
                 if (this.mainMenuCard.style.display === 'flex') {
-                    alert('เซสชัน Admin หมดอายุแล้ว กรุณาเข้าสู่ระบบอีกครั้ง');
+                    alert(`เซสชัน ${this.currentAdminName} หมดอายุแล้ว กรุณาเข้าสู่ระบบอีกครั้ง`);
                     this.showAdminAuthModal();
                 }
                 return;
@@ -662,7 +747,7 @@ class GeofenceApp {
             const seconds = Math.floor((timeRemaining % 60000) / 1000);
             const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-            this.countdownTimerText.textContent = `เซสชัน Admin จะหมดอายุใน ${formattedTime} นาที`;
+            this.countdownTimerText.textContent = `เซสชัน Admin (${this.currentAdminName}) จะหมดอายุใน ${formattedTime} นาที`;
         };
 
         updateTimer();
@@ -781,7 +866,7 @@ class GeofenceApp {
         
         let hasGeofenceControl = false;
 
-        // 🔴 FIX: ถ้าเป็น 'main_menu' หรือไม่มี studioEntry ให้ถือว่าไม่มีเกณฑ์ แต่ต้องบังคับให้กดกากบาท
+        // 🔴 FIX: ถ้าเป็น 'main_menu' หรือไม่มี studioEntry ให้ถือว่าไม่มีเกณฑ์ (บังคับให้กดกากบาท)
         if (action === 'main_menu' || !studioEntry) {
             hasGeofenceControl = false; 
         } else if (studioEntry) {
