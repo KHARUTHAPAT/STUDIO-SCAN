@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title id="pageTitle">ครุฯถาปัตย์</title>
+    <title id="pageTitle">ประกาศ</title>
     
     <link rel="icon" type="image/png" href="https://img2.pic.in.th/pic/012.1-LOGO---1.png">
     
@@ -248,6 +248,9 @@
             border-radius: 0 0 20px 20px !important;
             min-height: 55px;
         }
+        .neural-modal-content {
+            padding-bottom: 0 !important; 
+        }
         #announcementActionButton .button-bg {
              border-radius: 0 0 20px 20px !important;
         }
@@ -260,10 +263,18 @@
         .studio-menu-item .neural-button {
             margin-bottom: 0 !important;
         }
-        .copy-icon-button {
+        
+        /* 🔴 ปรับตำแหน่งไอคอนสำหรับคัดลอกและแชร์ 🔴 */
+        .icon-action-group {
             position: absolute;
             bottom: -15px; /* เลื่อนลงมาเล็กน้อย */
             right: 15px;
+            display: flex;
+            gap: 5px; /* ระยะห่างระหว่างปุ่ม */
+            z-index: 10;
+        }
+        
+        .copy-icon-button, .share-icon-button {
             width: 30px;
             height: 30px;
             background: #e2e8f0;
@@ -272,15 +283,14 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            z-index: 10;
             transition: all 0.2s ease;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        .copy-icon-button:hover {
+        .copy-icon-button:hover, .share-icon-button:hover {
             background: #cbd5e1;
             transform: scale(1.1);
         }
-        .copy-icon-button i {
+        .copy-icon-button i, .share-icon-button i {
             color: #475569;
             font-size: 14px;
         }
@@ -369,7 +379,7 @@
     </div>
     
     <div class="neural-modal-overlay" id="adminAuthModalOverlay" style="display:none;">
-        <div class="login-card neural-modal-content" style="max-width: 350px; padding: 32px; height: auto; transform: translateY(0); opacity: 1;">
+        <div class="login-card neural-modal-content" style="max-width: 350px; padding: 32px; height: auto; transform: translateY(0); opacity: 1; padding-bottom: 32px !important;">
             <h2 style="color: #f8fafc; margin-bottom: 20px; font-size: 1.5rem; text-align: center;">🛡️ เข้าถึงเมนู Admin</h2>
             <p style="color: #94a3b8; margin-bottom: 20px; text-align: center;">โปรดใส่รหัสผ่านเพื่อดำเนินการต่อ:</p>
             
