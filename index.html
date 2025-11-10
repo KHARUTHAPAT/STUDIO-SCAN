@@ -42,6 +42,7 @@
         }
         
         /* --- Text Loader (สำหรับ Modal ประกาศ 10s Timeout) --- */
+        /* 🔴 NEW: Text Loader - ใช้โครงสร้างที่คุณให้มา */
         .text-loader-container {
             position: relative;
             display: inline-block;
@@ -58,11 +59,25 @@
              position: relative;
              overflow: hidden;
         }
+        
+        /* 🔴 NEW CSS: Text Loader Bar (10s) 🔴 */
+        .text-loader {
+            font-size: 0.95rem; /* ปรับขนาดให้เข้ากับ modalLoaderText */
+            font-weight: 500;
+            position: relative;
+            display: inline-block;
+            padding-bottom: 5px;
+            overflow: hidden;
+            color: #f8fafc; /* ใช้สีขาวตาม Theme */
+            margin-top: 10px; /* เว้นระยะจาก circle loader */
+            text-align: center;
+        }
 
-        .text-loader-line {
+        .text-loader:after {
+            content: '';
             height: 3px;
             width: 100%;
-            background: #3b82f6; /* สีฟ้าตาม Brand */
+            background: #3b82f6; /* ใช้สีฟ้าตาม Brand */
             transform: scaleX(0);
             transform-origin: left;
             display: block;
@@ -275,17 +290,18 @@
             align-items: center;
         }
         
-        /* 🔴 NEW: Text สำหรับนับถอยหลังโหลด */
+        /* 🔴 NEW: Text สำหรับนับถอยหลังโหลด (ถูกรวมเข้ากับ .text-loader) */
+        /*
         #modalLoaderText {
              color: #f8fafc;
              font-size: 0.95rem;
              margin-top: 15px;
              text-align: center;
              font-weight: 500;
-             /* 🔴 ปรับให้ Text Loader ทำงาน */
              padding-bottom: 5px;
              position: relative;
         }
+        */
 
         /* *** แก้ไข: เพิ่ม Padding-top 2px เพื่อเว้นระยะห่างจากรูป *** */
         #announcementActionArea {
@@ -470,8 +486,7 @@
             
             <div id="modalLoader" style="position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
                 <div class="circle-loader-spin"></div>
-                <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
-                <div id="textLoaderLine" style="display:none;" class="text-loader-line"></div>
+                <span class="text-loader" id="modalLoaderText">กำลังโหลด</span>
                 </div>
             
             <div class="modal-body">
