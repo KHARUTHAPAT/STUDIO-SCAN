@@ -25,6 +25,15 @@ class GeofenceApp {
         this.announcementActionArea = document.getElementById('announcementActionArea');
         this.announcementActionButton = document.getElementById('announcementActionButton');
 
+        // 🔴 NEW: Admin Auth Elements
+        this.adminAuthModalOverlay = document.getElementById('adminAuthModalOverlay');
+        this.adminPasscodeInput = document.getElementById('adminPasscodeInput');
+        this.adminAuthButton = document.getElementById('adminAuthButton');
+        this.adminAuthError = document.getElementById('adminAuthError');
+        
+        this.ADMIN_PASSCODE = 'admin123'; // 🔴 รหัสผ่าน Admin
+        this.isAdminAuthenticated = false; // สถานะการล็อกอิน
+
         // =================================================================
         // *** 🔴 PURE SHEETS API V4 CONFIGURATION 🔴 ***
         // =================================================================
@@ -70,6 +79,37 @@ class GeofenceApp {
 
         this.init();
     }
+    
+    // --- Authentication Logic ---
+
+    showAdminAuthModal() {
+        this.adminAuthModalOverlay.style.display = 'flex';
+        this.adminAuthModalOverlay.classList.add('show');
+        this.adminPasscodeInput.focus();
+    }
+    
+    hideAdminAuthModal(callback) {
+        this.adminAuthModalOverlay.classList.remove('show');
+        setTimeout(() => {
+            this.adminAuthModalOverlay.style.display = 'none';
+            if (callback) callback();
+        }, 300);
+    }
+    
+    checkAdminPasscode() {
+        const inputCode = this.adminPasscodeInput.value.trim();
+        if (inputCode === this.ADMIN_PASSCODE) {
+            this.isAdminAuthenticated = true;
+            this.adminAuthError.style.display = 'none';
+            this.hideAdminAuthModal(() => {
+                this.continueAppFlow(); // ไปที่หน้าเมนูหลัก
+            });
+        } else {
+            this.adminAuthError.style.display = 'block';
+            this.adminPasscodeInput.value = '';
+            this.adminPasscodeInput.focus();
+        }
+    }
 
     init() {
         this.bindEvents();
@@ -84,10 +124,14 @@ class GeofenceApp {
              if (this.studioName) {
                  this.loadStudioFlow('geofence_check');
              } else {
+                 // 🔴 FLOW ADMIN: เมื่อเข้าหน้าหลัก ให้แสดง Modal รหัสผ่านก่อน
+                 this.showAdminAuthModal();
+                 
+                 // โหลดประกาศทันทีที่หลังบ้านโหลดเสร็จ
                  const initialAction = 'main_menu';
                  const initialControl = { hideCloseBtn: false, countdownSec: 0 }; 
-                 
-                 this.loadAnnouncement(initialAction, true, initialControl); 
+                 // isInitialLoad: false เพราะ Modal Auth เปิดอยู่แล้ว แต่เรายังต้องการให้มี Loader
+                 this.loadAnnouncement(initialAction, false, initialControl); 
              }
         }).catch(error => {
             console.error("Fatal Error during initial config load:", error);
@@ -95,7 +139,6 @@ class GeofenceApp {
         });
     }
     
-    // 🔴 FIX 3: ฟังก์ชันสำหรับล้างประวัติการเข้าชมเริ่มต้น
     clearInitialHistory() {
         window.history.replaceState(null, null, window.location.href);
     }
@@ -107,6 +150,7 @@ class GeofenceApp {
         this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
         this.retryButton = newButton; // อัปเดต Reference
         
+        // กำหนด Event Listener เป็นการเรียก checkGeolocation()
         this.retryButton.addEventListener('click', () => this.checkGeolocation());
         this.retryButton.querySelector('.button-text').textContent = 'ลองใหม่อีกครั้ง';
     }
@@ -117,13 +161,38 @@ class GeofenceApp {
             window.open(url, '_blank');
         }
     }
+    
+    // 🔴 NEW: คัดลอก URL ของหน้า Studio
+    _copyStudioLink = (event) => {
+        const link = event.currentTarget.getAttribute('data-link');
+        navigator.clipboard.writeText(link).then(() => {
+            event.currentTarget.querySelector('.button-text').textContent = 'คัดลอกลิ้งค์แล้ว!';
+            setTimeout(() => {
+                 event.currentTarget.querySelector('.button-text').textContent = 'คัดลอกลิ้งค์';
+            }, 1500);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('ไม่สามารถคัดลอกลิ้งค์ได้ (โปรดตรวจสอบสิทธิ์ของเบราว์เซอร์)');
+        });
+    }
 
     bindEvents() {
-        // 🔴 FIX: ใช้ฟังก์ชันตั้งค่าเริ่มต้นแทนการกำหนด Event ตรงๆ
         this._setRetryToGeolocationCheck(); 
         
         if (this.closeAnnouncementButton) {
             this.closeAnnouncementButton.addEventListener('click', () => this.closeAnnouncementModal());
+        }
+        
+        // 🔴 NEW: Event สำหรับ Admin Auth Modal
+        if (this.adminAuthButton) {
+            this.adminAuthButton.addEventListener('click', () => this.checkAdminPasscode());
+        }
+        if (this.adminPasscodeInput) {
+            this.adminPasscodeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.checkAdminPasscode();
+                }
+            });
         }
         
         // เมื่อภาพโหลดเสร็จ (สำเร็จ)
@@ -318,6 +387,7 @@ class GeofenceApp {
         this.loadAnnouncement(action, true, this.announcementControl); 
     }
     
+    // 🔴 เมื่อเข้าถึงหน้า Menu สำเร็จ (หลังใส่รหัสผ่าน)
     continueAppFlow() {
         this.isBypassMode = false;
         this.bypassUrl = null;
@@ -364,26 +434,52 @@ class GeofenceApp {
         document.getElementById('mainContainerWrapper').style.marginTop = '';
     }
     
+    // 🔴 NEW: Setup Menu Buttons (รวมปุ่มคัดลอกลิ้งค์)
     setupMenuButtons(studioNames) {
         this.menuButtonsContainer.innerHTML = ''; 
         
         studioNames.forEach(name => {
-            const newButton = document.createElement('button');
-            newButton.className = 'neural-button';
-            newButton.type = 'button';
-            newButton.style.marginTop = '0';
+            const url = `?studio=${encodeURIComponent(name)}`;
+            const fullLink = window.location.origin + window.location.pathname + url;
             
-            newButton.innerHTML = `
+            // 1. สร้างปุ่ม Studio
+            const studioButton = document.createElement('button');
+            studioButton.className = 'neural-button';
+            studioButton.type = 'button';
+            studioButton.style.marginTop = '0';
+            studioButton.style.marginBottom = '10px'; // ลด margin bottom
+            
+            studioButton.innerHTML = `
                 <div class="button-bg"></div>
                 <span class="button-text">${name}</span> <div class="button-glow"></div>
             `;
 
-            newButton.addEventListener('click', () => {
-                const url = `?studio=${encodeURIComponent(name)}`;
-                window.open(window.location.origin + window.location.pathname + url, '_blank'); 
+            studioButton.addEventListener('click', () => {
+                window.open(fullLink, '_blank'); 
             });
             
-            this.menuButtonsContainer.appendChild(newButton);
+            this.menuButtonsContainer.appendChild(studioButton);
+            
+            // 2. สร้างปุ่มคัดลอกลิ้งค์
+            const copyButton = document.createElement('button');
+            copyButton.className = 'neural-button';
+            copyButton.type = 'button';
+            copyButton.style.marginTop = '0';
+            copyButton.style.minHeight = '35px';
+            copyButton.style.fontSize = '12px';
+            copyButton.style.backgroundColor = 'transparent'; 
+            copyButton.style.border = '1px solid rgba(0, 0, 0, 0.1)';
+            copyButton.style.marginBottom = '20px';
+            
+            copyButton.innerHTML = `
+                <div class="button-bg" style="background: #e2e8f0;"></div>
+                <span class="button-text" style="color: #475569; font-weight: 500;">คัดลอกลิ้งค์</span>
+                <div class="button-glow" style="background: rgba(0, 0, 0, 0.1);"></div>
+            `;
+            copyButton.setAttribute('data-link', fullLink);
+            copyButton.addEventListener('click', this._copyStudioLink);
+            
+            this.menuButtonsContainer.appendChild(copyButton);
         });
     }
 
@@ -428,7 +524,7 @@ class GeofenceApp {
         
         if (!result.hasContent) {
             this.isAnnouncementActive = false; 
-            this.closeAnnouncementModal();
+            if (!isInitialLoad) this.closeAnnouncementModal(); 
             return;
         }
 
@@ -534,7 +630,8 @@ class GeofenceApp {
                 this.showGeofenceChecker();
                 this.checkGeolocation();
             } else if (postAction === 'main_menu') {
-                 this.continueAppFlow();
+                // 🔴 ถ้าปิดประกาศในหน้าหลัก ให้เรียก Modal Auth 
+                this.showAdminAuthModal();
             }
         }, 300); 
     }
@@ -542,7 +639,7 @@ class GeofenceApp {
     // --- Geofencing Logic (with 2-second delay and Retry Fix) ---
 
     checkGeolocation() {
-        // 🔴 เมื่อมีการกดปุ่ม ลองใหม่อีกครั้ง / เริ่มต้น ให้ตั้งค่าปุ่มกลับเป็นสถานะเดิมก่อน
+        // 🔴 เมื่อมีการกดปุ่ม ลองใหม่อีกครั้ง / เริ่มต้น ให้ตั้งค่าปุ่มกลับเป็นสถานะปกติก่อน
         this._setRetryToGeolocationCheck(); 
         
         if (this.target.lat === null) {
@@ -561,7 +658,8 @@ class GeofenceApp {
                 navigator.geolocation.getCurrentPosition(
                     (position) => this.geoSuccess(position),
                     (error) => this.geoError(error), 
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 } 
+                    // 🟢 FIX 5: ตั้งค่า maximumAge เป็น 5 นาที (300000ms) เพื่ออนุญาตให้ใช้ Cache
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
                 );
             } else {
                 this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
@@ -591,25 +689,15 @@ class GeofenceApp {
         let errorMessage = 'ไม่สามารถเข้าถึงตำแหน่ง GPS ได้';
         let customMessage = 'โปรดตรวจสอบว่าได้เปิด GPS และอนุญาตการเข้าถึงตำแหน่งสำหรับเว็บไซต์นี้';
 
+        // 🔴 เมื่อเกิด Error ใดๆ ให้ใช้ปุ่ม "ลองใหม่อีกครั้ง" ตามปกติ 🔴
+        this._setRetryToGeolocationCheck(); 
+
         if (error.code === 1) {
             errorMessage += ' (ถูกปฏิเสธ)';
-            
-            // 🔴 FIX: เปลี่ยนปุ่มให้กลายเป็นปุ่ม Reload เมื่อถูกปฏิเสธสิทธิ์
-            const newButton = this.retryButton.cloneNode(true);
-            this.retryButton.parentNode.replaceChild(newButton, this.retryButton);
-            this.retryButton = newButton; 
-            
-            // ใช้งาน Event Listener ใหม่ (Reload)
-            this.retryButton.removeEventListener('click', this.checkGeolocation); 
-            this.retryButton.addEventListener('click', () => window.location.reload()); 
-            this.retryButton.querySelector('.button-text').textContent = 'รีเฟรชเพื่อขอสิทธิ์ใหม่'; 
-            
         } else if (error.code === 2) {
             errorMessage += ' (ไม่พบตำแหน่ง)';
-            this._setRetryToGeolocationCheck(); // คืนปุ่มเป็นสถานะเดิม
         } else if (error.code === 3) {
             errorMessage += ' (หมดเวลาค้นหา)';
-            this._setRetryToGeolocationCheck(); // คืนปุ่มเป็นสถานะเดิม
         }
         
         this.updateStatus('error', errorMessage, customMessage);
