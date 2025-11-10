@@ -47,33 +47,17 @@
              font-size: 0.95rem;
              font-weight: 500;
              color: #f8fafc;
-             display: inline-block;
-             padding-bottom: 5px; /* เว้นระยะสำหรับเส้นข้างล่าง */
+             /* ลบ padding-bottom ที่เว้นไว้สำหรับเส้นโหลด */
+             display: inline-block; 
              position: relative;
              overflow: hidden;
              margin-top: 15px; /* เว้นระยะจาก circle loader */
              text-align: center;
-             margin-bottom: 20px; /* FIX: เพิ่มระยะห่างด้านล่าง Text/Line */
+             margin-bottom: 0px; /* 🔴 FIX: ลบระยะห่างด้านล่าง Text/Line */
         }
         
-        /* 🔴 NEW/UPDATED: Text Loader Line (ถูกเรียกโดย JS) */
-        .text-loader-line {
-            height: 3px;
-            width: 100%;
-            background: #3b82f6; /* สีฟ้าตาม Brand */
-            transform: scaleX(0);
-            transform-origin: left;
-            display: block;
-            animation: lineGrow 20s linear infinite; /* แก้ไข: 10s -> 20s */
-            position: absolute;
-            bottom: 0;
-            left: 0;
-        }
-
-        @keyframes lineGrow {
-            0% { transform: scaleX(0); }
-            100% { transform: scaleX(1); }
-        }
+        /* 🔴 REMOVED: ลบ CSS สำหรับ .text-loader-line และ @keyframes lineGrow ออกจากไฟล์นี้แล้ว */
+        
         /* ---------------------------------------------------- */
         
         /* ============================================== */
@@ -461,7 +445,6 @@
             <div id="modalLoader" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
                 <div class="circle-loader-spin"></div>
                 <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
-                <div id="textLoaderLine" style="display:none;" class="text-loader-line"></div>
                 </div>
             
             <div class="modal-body">
