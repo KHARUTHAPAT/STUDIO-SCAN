@@ -21,10 +21,8 @@ class GeofenceApp {
         this.closeIcon = this.closeAnnouncementButton.querySelector('.close-icon'); 
         this.modalLoader = document.getElementById('modalLoader'); 
         
-        // 🔴 NEW: เพิ่ม Modal Loader Text
+        // 🔴 NEW: Modal Loader Text (ตอนนี้คือ .text-loader)
         this.modalLoaderText = document.getElementById('modalLoaderText');
-        // 🔴 NEW: เพิ่ม Text Loader Line Element
-        this.textLoaderLine = document.getElementById('textLoaderLine');
         
         // 🔴 NEW: Floating Footer Elements
         this.countdownFooter = document.getElementById('countdownFooter');
@@ -294,9 +292,8 @@ class GeofenceApp {
              if (this.loadTimeoutInterval) {
                  clearInterval(this.loadTimeoutInterval);
                  this.loadTimeoutInterval = null;
+                 // 🔴 NEW: ซ่อน Text Loader 10s
                  if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
-                 // 🔴 NEW: ซ่อนแถบโหลด 10s
-                 if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
              }
 
              this.modalLoader.style.display = 'none';
@@ -313,9 +310,8 @@ class GeofenceApp {
              if (this.loadTimeoutInterval) {
                  clearInterval(this.loadTimeoutInterval);
                  this.loadTimeoutInterval = null;
+                 // 🔴 NEW: ซ่อน Text Loader 10s
                  if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
-                 // 🔴 NEW: ซ่อนแถบโหลด 10s
-                 if (this.textLoaderLine) this.textLoaderLine.style.display = 'none';
              }
              
              this.modalLoader.style.display = 'none';
@@ -627,20 +623,16 @@ class GeofenceApp {
         if (this.modalLoaderText) {
              this.modalLoaderText.style.display = 'block';
              this.modalLoaderText.style.color = '#f8fafc';
-        }
-        // 🔴 NEW: แสดงแถบโหลด 10s
-        if (this.textLoaderLine) {
-             this.textLoaderLine.style.display = 'block';
-             // 🔴 FIX: บังคับให้เริ่ม Animation ใหม่ (ถ้ามี) 
-             this.textLoaderLine.style.animation = 'none';
-             this.textLoaderLine.offsetHeight; // Trigger reflow
-             this.textLoaderLine.style.animation = 'lineGrow 10s linear infinite';
+             
+             // 🔴 NEW: ตั้งค่าข้อความเริ่มต้นและรีเซ็ตแอนิเมชันของแถบ
+             this.modalLoaderText.textContent = `กำลังโหลด`;
+             this.modalLoaderText.style.animation = 'none';
+             this.modalLoaderText.offsetHeight; // Trigger reflow
+             this.modalLoaderText.style.animation = ''; // ใช้ CSS :after animation
         }
         
         this.loadTimeoutInterval = setInterval(() => {
-            if (this.modalLoaderText) {
-                this.modalLoaderText.textContent = `(กำลังโหลด ${remaining})`; 
-            }
+            // 🔴 ไม่ต้องแสดงตัวเลข แต่ใช้เวลาเป็นเงื่อนไขหยุด
             remaining--;
 
             if (remaining < 0) {
@@ -651,11 +643,9 @@ class GeofenceApp {
                 if (this.announcementModalOverlay.classList.contains('show')) {
                      console.warn("Announcement timed out after 10s. Continuing flow.");
                      
-                     // 1. ซ่อน Loader และ text
+                     // 1. ซ่อน Loader
                      this.modalLoader.style.display = 'none';
                      if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
-                     // 🔴 NEW: ซ่อนแถบโหลด 10s
-                     if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
 
                      // 2. หากยังไม่มีภาพ (แสดงว่าโหลดไม่ทัน) ให้ไปควบคุมปุ่มปิดเลย
                      if (this.announcementImage.style.display === 'none') {
@@ -787,8 +777,6 @@ class GeofenceApp {
         } else {
             this.modalLoader.style.display = 'none'; 
             if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
-            // 🔴 NEW: ซ่อนแถบโหลด 10s
-            if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
             this.announcementModalOverlay.classList.remove('initial-show'); 
             this.startCloseButtonControl(action); 
         }
@@ -872,9 +860,8 @@ class GeofenceApp {
              clearInterval(this.loadTimeoutInterval);
              this.loadTimeoutInterval = null;
         }
+        // 🔴 NEW: ซ่อน Text Loader 10s
         if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
-        // 🔴 NEW: ซ่อนแถบโหลด 10s
-        if (this.textLoaderLine) this.textLoaderLine.style.display = 'none'; 
 
 
         this.isAnnouncementActive = false;
