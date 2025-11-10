@@ -271,12 +271,19 @@
         /* 🔴 NEW CSS: สำหรับปุ่มคัดลอกลิ้งค์ขนาดเล็ก */
         .studio-menu-item {
             position: relative;
-            /* ลบ margin-bottom ออกไปเลย */
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
         }
         .studio-menu-item .neural-button {
             margin-bottom: 0 !important;
             position: relative; /* ให้ปุ่มหลักเป็น reference สำหรับ absolute positioning */
             overflow: hidden;
+            border-radius: 0;
+            min-height: 60px;
+        }
+        .studio-menu-item .neural-button:first-child {
+             border-radius: 12px 12px 0 0 !important; 
         }
         
         /* 🔴 ปรับตำแหน่งไอคอนให้อยู่ภายในปุ่มหลัก 🔴 */
@@ -285,15 +292,15 @@
             top: 0; 
             right: 0;
             display: flex;
-            gap: 0; /* ชิดติดกัน */
+            gap: 0;
             z-index: 10;
         }
         
         /* 🔴 ปรับสไตล์ปุ่มไอคอน 🔴 */
         .copy-icon-button, .share-icon-button {
-            width: 45px; /* เพิ่มความกว้างให้ปุ่มไอคอน */
-            height: 55px; /* ความสูงเท่าปุ่มหลัก */
-            background: rgba(0, 0, 0, 0.4); /* สีดำจางๆ */
+            width: 45px; 
+            height: 55px; 
+            background: rgba(0, 0, 0, 0.4); 
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             display: flex;
@@ -304,11 +311,11 @@
             z-index: 10;
         }
         .copy-icon-button:hover, .share-icon-button:hover {
-            background: rgba(59, 130, 246, 0.7); /* สีน้ำเงินเมื่อ hover */
-            transform: none; /* ยกเลิก transform scale */
+            background: rgba(59, 130, 246, 0.7); 
+            transform: none; 
         }
         .copy-icon-button i, .share-icon-button i {
-            color: #ffffff; /* เปลี่ยนสีไอคอนเป็นสีขาว */
+            color: #ffffff; 
             font-size: 14px;
         }
         
@@ -324,9 +331,9 @@
             left: 0;
             right: 0;
             width: 100%;
-            background: rgba(0, 0, 0, 0.8); /* พื้นหลังดำจางๆ */
+            background: rgba(0, 0, 0, 0.8); 
             backdrop-filter: blur(5px);
-            z-index: 990; /* ให้อยู่เหนือเนื้อหา แต่ใต้ Modal */
+            z-index: 990; 
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
         }
 
@@ -334,6 +341,38 @@
             font-size: 0.95rem;
             color: #fff;
             padding: 10px;
+        }
+        
+        /* 🔴 NEW CSS: สำหรับแถบปุ่มติดกันในหน้า Menu Admin 🔴 */
+        .icon-action-strip {
+            display: flex;
+            width: 100%;
+        }
+        .icon-action-strip .neural-button {
+            flex-grow: 1;
+            width: 50%;
+            min-height: 40px; 
+            margin-bottom: 0 !important;
+            border-radius: 0 !important;
+            /* สไตล์สำหรับแถบสีเทา */
+            background: #e2e8f0 !important;
+            border: none;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        .icon-action-strip .neural-button:first-child {
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 0 12px !important;
+        }
+        .icon-action-strip .neural-button:last-child {
+            border-radius: 0 0 12px 0 !important;
+        }
+        .icon-action-strip .button-text {
+            color: #475569;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .icon-action-strip .button-text i {
+             margin-right: 5px;
         }
     </style>
 </head>
