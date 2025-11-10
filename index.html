@@ -42,13 +42,6 @@
         }
         
         /* --- Text Loader (สำหรับ Modal ประกาศ 20s Timeout) --- */
-        /* 🔴 REVERTED/UPDATED: ใช้โครงสร้างเดิมและปรับ 20s */
-        .text-loader-container {
-            position: relative;
-            display: inline-block;
-            overflow: hidden;
-            color: #FFF;
-        }
         
         #modalLoaderText {
              font-size: 0.95rem;
@@ -60,7 +53,7 @@
              overflow: hidden;
              margin-top: 15px; /* เว้นระยะจาก circle loader */
              text-align: center;
-             margin-bottom: 20px; /* 🔴 FIX: เพิ่มระยะห่างด้านล่าง Text/Line */
+             margin-bottom: 20px; /* FIX: เพิ่มระยะห่างด้านล่าง Text/Line */
         }
         
         /* 🔴 NEW/UPDATED: Text Loader Line (ถูกเรียกโดย JS) */
@@ -71,7 +64,7 @@
             transform: scaleX(0);
             transform-origin: left;
             display: block;
-            animation: lineGrow 20s linear infinite; /* 🔴 แก้ไข: 10s -> 20s */
+            animation: lineGrow 20s linear infinite; /* แก้ไข: 10s -> 20s */
             position: absolute;
             bottom: 0;
             left: 0;
@@ -169,11 +162,13 @@
             backdrop-filter: blur(5px);
             z-index: 1000;
             display: flex;
-            align-items: center;
+            /* 🔴 FIX: กลับไปจัด Modal ทั้งก้อนอยู่กึ่งกลางแนวตั้ง */
+            align-items: center; 
             justify-content: center;
             opacity: 0;
             transition: opacity 0.3s ease;
             pointer-events: none;
+            padding-top: 0; /* 🔴 FIX: ลบ padding-top ออก */
         }
         /* NEW: Class สำหรับแสดง Loader ทันทีเมื่อเข้าเว็บ */
         .neural-modal-overlay.initial-show {
@@ -192,15 +187,16 @@
             max-width: 90vw;
             width: 400px;
             height: auto;
-            max-height: 90vh;
+            max-height: 90vh; /* 🔴 FIX: ใช้ 90vh แทน calc() เพื่อให้จัดกึ่งกลางดีขึ้น */
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             position: relative;
-            transform: translateY(20px);
+            transform: translateY(0); /* 🔴 FIX: ลบ Transform เดิม */
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
             overflow: hidden;
             display: flex; 
             flex-direction: column; 
+            margin-top: 0; 
         }
         .neural-modal-overlay.show .neural-modal-content,
         .neural-modal-overlay.initial-show .neural-modal-content {
@@ -268,12 +264,13 @@
             display: none; 
         }
 
-        /* 🔴 FIX: โครงสร้าง Modal Loader ใหม่ */
+        /* 🔴 FIX: โครงสร้าง Modal Loader ใหม่ - ปรับตำแหน่งให้เหมาะสม */
+        /* ให้ Modal Loader อยู่กึ่งกลางภายในพื้นที่ของ Modal Content */
         #modalLoader {
             position: absolute;
-            top: 40%; 
+            top: 50%; /* 🔴 FIX: จัดกึ่งกลางแนวตั้งของ Modal Content */
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%); 
             z-index: 10;
             display: flex;
             flex-direction: column;
@@ -461,7 +458,7 @@
             <div class="login-header" style="margin-bottom: 10px; text-align: center;">
             </div>
             
-            <div id="modalLoader" style="position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
+            <div id="modalLoader" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; display: flex; flex-direction: column; align-items: center;"> 
                 <div class="circle-loader-spin"></div>
                 <p id="modalLoaderText" style="display:none; color: #f8fafc; font-size: 0.95rem; margin-top: 10px; font-weight: 500;"></p>
                 <div id="textLoaderLine" style="display:none;" class="text-loader-line"></div>
