@@ -1023,67 +1023,38 @@ class GeofenceApp {
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
         const distanceMeters = (distance * 1000).toFixed(0);
         
-        // ❌ REMOVED: ไม่มีการตรวจสอบวันหมดอายุจาก M8 ใน JS แล้ว
-        
         // 🔴 NEW: 1. สร้าง Pseudo-Token และ Timestamp
         const currentTimestamp = Date.now();
         // ใช้ Timestamp เป็น Token เพื่อระบุว่าการเข้าถึงเกิดขึ้นเมื่อใด (เปลี่ยนเป็นเลขฐาน 36 เพื่อความสั้น)
         const pseudoToken = currentTimestamp.toString(36); 
         
         if (distance <= this.target.dist) {
-            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
+            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (กำลังเปิด Form...)`);
             
-            // 🔴 NEW: 2. เพิ่ม Token และ Timestamp เข้าไปใน URL ปลายทาง
-            let finalUrl = this.target.url;
+            // 🚨 NEW LOGIC: เปลี่ยนปลายทางเป็น Proxy Page
+            const PROXY_PAGE_URL = window.location.origin + window.location.pathname.replace('index.html', 'token-validator.html');
             
-            // 💡 สำคัญ: ถ้า target.url คือ Google Form ให้ใช้รูปแบบ pre-filled field
-            if (finalUrl.includes('google.com/forms/')) {
-                 // ตรวจสอบว่า URL มีเครื่องหมาย ? หรือไม่
-                 const separator = finalUrl.includes('?') ? '&' : '?';
-                 
-                 // 🚨 LOGIC ใหม่: กำหนด Field ID ตาม URL ปลายทาง
-                 let TOKEN_FIELD_ID = '';
-                 let TIMESTAMP_FIELD_ID = '';
-                 
-                 // 🎯 Form 1 (Studio 3) 
-                 if (finalUrl.includes('1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww')) {
-                     TOKEN_FIELD_ID = 'entry.2084859674'; 
-                     TIMESTAMP_FIELD_ID = 'entry.1465967331';
-                 } 
-                 // 🎯 Form 2 (Studio 5)
-                 else if (finalUrl.includes('1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA')) {
-                     TOKEN_FIELD_ID = 'entry.736609822'; 
-                     TIMESTAMP_ID = 'entry.827398466';
-                 }
-                 // 🎯 Form 3 (Studio 4)
-                 else if (finalUrl.includes('1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA')) {
-                     TOKEN_FIELD_ID = 'entry.522425491'; 
-                     TIMESTAMP_ID = 'entry.147300429'; 
-                 } 
-                 // 🎯 Form 4 (Studio 2)
-                 else if (finalUrl.includes('1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA')) {
-                     TOKEN_FIELD_ID = 'entry.988532248'; 
-                     TIMESTAMP_ID = 'entry.1166641522';
-                 } 
-                 // 🎯 Form 5 (Studio 1)
-                 else if (finalUrl.includes('1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw')) {
-                     TOKEN_FIELD_ID = 'entry.1207357982'; 
-                     TIMESTAMP_ID = 'entry.25177657'; 
-                 } 
-                 // 🛑 ค่าเริ่มต้น: หากไม่พบ Forms ID ที่ตรงกัน ให้ใช้ Field ID ของ Studio 3
-                 else {
-                      console.warn("Forms ID not matched, using default Field IDs (Studio 3).");
-                      TOKEN_FIELD_ID = 'entry.2084859674'; 
-                      TIMESTAMP_ID = 'entry.1465967331';
-                 }
+            let targetFormsId = '';
+            
+            // 1. ดึง Forms ID
+            if (this.target.url.includes('1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww')) {
+                targetFormsId = '1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww';
+            } else if (this.target.url.includes('1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA')) {
+                targetFormsId = '1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA'; // Studio 5
+            } else if (this.target.url.includes('1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA')) {
+                targetFormsId = '1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA'; // Studio 4
+            } else if (this.target.url.includes('1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA')) {
+                targetFormsId = '1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA'; // Studio 2
+            } else if (this.target.url.includes('1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw')) {
+                targetFormsId = '1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw'; // Studio 1
+            } 
+            
+            // 2. สร้างลิงก์ไปยัง Proxy Page (พร้อมแนบ Token และ Forms ID)
+            // Note: ต้อง encodeURIComponent(this.target.url) เพื่อป้องกันปัญหา URL
+            const finalUrl = `${PROXY_PAGE_URL}?formsId=${targetFormsId}&token=${pseudoToken}&timestamp=${currentTimestamp}&redirectUrl=${encodeURIComponent(this.target.url)}`;
 
-
-                 finalUrl += `${separator}${TOKEN_FIELD_ID}=${pseudoToken}&${TIMESTAMP_FIELD_ID}=${currentTimestamp}`;
-            }
-
-            // Redirect หลังแสดงผลสำเร็จ 2 วินาที (ใช้ GEOFENCE_STATUS_DELAY_MS อีกครั้งสำหรับการเปลี่ยนหน้า)
+            // Redirect หลังแสดงผลสำเร็จ 2 วินาที
             this.geofenceTimeoutId = setTimeout(() => {
-                 // 🟢 ใช้ finalUrl ที่มี Token
                  window.open(finalUrl, '_self'); 
             }, this.GEOFENCE_STATUS_DELAY_MS); 
 
