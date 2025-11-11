@@ -277,7 +277,7 @@ class GeofenceApp {
         textArea.select();
         try {
             document.execCommand('copy');
-            this._showCopyFeedback(iconElement);
+            this._showCopyFeedback(event.currentTarget);
         } catch (err) {
             console.error('Fallback: Oops, unable to copy', err);
             alert(`ไม่สามารถคัดลอกได้อัตโนมัติ: ${text}`);
@@ -991,22 +991,23 @@ class GeofenceApp {
         this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
         this.retryButton.style.display = 'none'; 
         
-        // 🛑 NEW FLOW: เรียกใช้ Geolocation API ทันที
-        if (navigator.geolocation) {
-            // ไม่ต้องหน่วงเวลา 2 วินาทีแล้ว เรียก getCurrentPosition ทันที
-            navigator.geolocation.getCurrentPosition(
-                (position) => this.geoSuccess(position), 
-                (error) => this.geoError(error), 
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
-            );
-        } else {
-            this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
+        // --- ขั้นตอนที่ 1: รอ 2 วินาที (Loading Delay) ---
+        this.geofenceTimeoutId = setTimeout(() => {
             
-            // 🔴 หน่วงเวลา 2 วินาที ก่อนแสดงปุ่ม Retry (ตาม Flow ใหม่ที่ต้องการ)
-            this.geofenceTimeoutId = setTimeout(() => {
+            // 2. เรียกใช้ Geolocation API (หลังจาก 2 วินาที)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => this.geoSuccess(position), 
+                    (error) => this.geoError(error), 
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
+                );
+            } else {
+                this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
+                // 🔴 NEW: แสดงปุ่ม Retry ทันที (ไม่ต้องรอ delay ซ้ำ)
                 this.retryButton.style.display = 'flex';
-            }, this.GEOFENCE_STATUS_DELAY_MS);
-        }
+            }
+            
+        }, this.GEOFENCE_STATUS_DELAY_MS);
     }
     
     geoSuccess(position) {
@@ -1015,18 +1016,18 @@ class GeofenceApp {
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
         const distanceMeters = (distance * 1000).toFixed(0);
         
+        // 🔴 NEW: ไม่ต้องหน่วงเวลาซ้ำ 2 วินาที 
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             
-            // 🚨 แก้ไข: ใช้ setTimeout 2 วินาที ก่อน Redirect ไปยัง URL ปลายทาง
+            // Redirect หลังแสดงผลสำเร็จ 2 วินาที (ใช้ GEOFENCE_STATUS_DELAY_MS อีกครั้งสำหรับการเปลี่ยนหน้า)
             this.geofenceTimeoutId = setTimeout(() => {
-                 // 🟢 Redirect สุดท้าย
+                 // 🟢 Redirect สุดท้ายไปยัง URL ปลายทาง (จำเป็นสำหรับการทำงาน)
                  window.open(this.target.url, '_self'); 
             }, this.GEOFENCE_STATUS_DELAY_MS); 
             
-            // 🔴 ปุ่ม Retry ไม่ควรแสดงเมื่อ Success (เว้นแต่จะ Redirect ล้มเหลว)
-            // แต่เพื่อให้ปุ่มแสดงพร้อมหน้าผลลัพธ์ (ตามความต้องการล่าสุด) จึงต้องคงโค้ดไว้
-            this.retryButton.style.display = 'flex'; 
+            // 🛑 ปุ่ม Retry ต้องแสดงทันทีพร้อมหน้าผลลัพธ์ (ตามความต้องการล่าสุด)
+            this.retryButton.style.display = 'flex';
 
         } else {
             const maxMeters = this.target.dist * 1000;
@@ -1043,6 +1044,7 @@ class GeofenceApp {
 
         this._setRetryToGeolocationCheck(); 
         
+        // 🔴 NEW: ไม่ต้องหน่วงเวลาซ้ำ 2 วินาที
         if (error.code === 1) {
             errorMessage += ' (ถูกปฏิเสธ)';
         } else if (error.code === 2) {
