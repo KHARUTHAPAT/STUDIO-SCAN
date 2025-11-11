@@ -1032,30 +1032,34 @@ class GeofenceApp {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (กำลังเปิด Form...)`);
             
             // 🚨 NEW LOGIC: เปลี่ยนปลายทางเป็น Proxy Page
+            // 1. กำหนด URL ของ Proxy Page (ต้องแน่ใจว่าชื่อไฟล์ถูกต้อง)
             const PROXY_PAGE_URL = window.location.origin + window.location.pathname.replace('index.html', 'token-validator.html');
             
             let targetFormsId = '';
             
-            // 1. ดึง Forms ID
-            if (this.target.url.includes('1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww')) {
-                targetFormsId = '1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww';
-            } else if (this.target.url.includes('1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA')) {
-                targetFormsId = '1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA'; // Studio 5
-            } else if (this.target.url.includes('1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA')) {
-                targetFormsId = '1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA'; // Studio 4
-            } else if (this.target.url.includes('1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA')) {
-                targetFormsId = '1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA'; // Studio 2
-            } else if (this.target.url.includes('1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw')) {
-                targetFormsId = '1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw'; // Studio 1
-            } 
+            // 2. ใช้ Match เพื่อดึง Forms ID (ID ยาว ๆ) จาก URL ปลายทาง
+            const formIdMatch = this.target.url.match(/forms\/d\/e\/([a-zA-Z0-9_-]+)/);
+            if (formIdMatch && formIdMatch[1]) {
+                targetFormsId = formIdMatch[1];
+            }
             
-            // 2. สร้างลิงก์ไปยัง Proxy Page (พร้อมแนบ Token และ Forms ID)
+            // 3. ตรวจสอบว่าดึง Forms ID ได้สำเร็จหรือไม่
+            if (!targetFormsId) {
+                 console.error("Fatal Error: Could not extract Forms ID from target URL:", this.target.url);
+                 this.updateStatus('error', 'ข้อผิดพลาด URL', 'ไม่สามารถแยก Forms ID จากลิงก์ปลายทางได้');
+                 this.retryButton.style.display = 'flex';
+                 return;
+            }
+
+
+            // 4. สร้างลิงก์ไปยัง Proxy Page (พร้อมแนบ Token และ Forms ID)
             // Note: ต้อง encodeURIComponent(this.target.url) เพื่อป้องกันปัญหา URL
             const finalUrl = `${PROXY_PAGE_URL}?formsId=${targetFormsId}&token=${pseudoToken}&timestamp=${currentTimestamp}&redirectUrl=${encodeURIComponent(this.target.url)}`;
 
             // Redirect หลังแสดงผลสำเร็จ 2 วินาที
             this.geofenceTimeoutId = setTimeout(() => {
-                 window.open(finalUrl, '_self'); 
+                 // 🛑 ใช้ window.location.replace() เพื่อบังคับเปลี่ยนหน้าในแท็บปัจจุบัน
+                 window.location.replace(finalUrl); 
             }, this.GEOFENCE_STATUS_DELAY_MS); 
 
         } else {
