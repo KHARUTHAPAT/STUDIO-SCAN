@@ -90,6 +90,9 @@ class GeofenceApp {
         this.geofenceConfig = {}; 
         this.announcementConfig = {}; 
         
+        // 🔴 NEW: ตัวแปรสำหรับเก็บเวลาหมดอายุของ Token
+        this.tokenExpiryTime = null; 
+        
         this.target = { lat: null, lon: null, dist: null, url: null };
 
         this.isBypassMode = false;
@@ -502,14 +505,48 @@ class GeofenceApp {
             return []; 
         }
     }
+    
+    // 🔴 NEW FUNCTION: ดึงเวลาหมดอายุของ Token จาก M8
+    async fetchTokenExpiryFromSheet() {
+        // ดึงจาก M8 ในชีต 'รวมข้อมูล'
+        const range = `${this.CONFIG_SHEET_NAME}!M8`; 
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${this.SHEET_ID}/values/${range}?key=${this.API_KEY}`;
+        
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 throw new Error(`Sheets API Error: ${errorData.error.message}`);
+            }
+            const data = await response.json();
+            
+            const expiryDateStr = data.values && data.values[0] && data.values[0][0] || '';
+            
+            // พยายามแปลงสตริงเป็น Object วันที่
+            const expiryTime = new Date(expiryDateStr);
+
+            // 🔴 ตรวจสอบว่าวันที่ถูกต้องหรือไม่
+            if (isNaN(expiryTime.getTime())) {
+                console.warn(`Invalid token expiry date/time found in M8: ${expiryDateStr}`);
+                return null; 
+            }
+
+            return expiryTime;
+            
+        } catch (error) {
+            console.error('Error fetching Token Expiry Config:', error);
+            return null;
+        }
+    }
 
     async loadInitialConfig() {
-        const [studioList, geofenceConfig, announcementConfig, adminUsers] = await Promise.all([
+        // 🔴 เพิ่ม tokenExpiryTime ใน Promise.all
+        const [studioList, geofenceConfig, announcementConfig, adminUsers, tokenExpiryTime] = await Promise.all([
             this.fetchStudioListFromSheet(),
             this.fetchGeofenceConfigFromSheet(),
             this.fetchAnnouncementConfigFromSheet(),
-            // 🔴 NEW: ดึงข้อมูล Admin
-            this.fetchAdminUsersFromSheet() 
+            this.fetchAdminUsersFromSheet(),
+            this.fetchTokenExpiryFromSheet() // 🔴 NEW FETCHER
         ]);
         
         this.studioData = studioList;
@@ -517,6 +554,8 @@ class GeofenceApp {
         this.announcementConfig = announcementConfig;
         // 🔴 NEW: เก็บข้อมูล Admin ที่ดึงมา
         this.ADMIN_USERS = adminUsers;
+        // 🔴 NEW: เก็บเวลาหมดอายุ
+        this.tokenExpiryTime = tokenExpiryTime; 
         
         if (this.ADMIN_USERS.length === 0) {
              console.warn("No Admin users loaded. Authentication will fail unless data is populated.");
@@ -1016,14 +1055,73 @@ class GeofenceApp {
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
         const distanceMeters = (distance * 1000).toFixed(0);
         
-        // 🔴 NEW: ไม่ต้องหน่วงเวลาซ้ำ 2 วินาที 
+        // 🔴 NEW: 1. ตรวจสอบวันหมดอายุของ Token ก่อนดำเนินการ (ใช้ค่าจาก M8)
+        if (this.tokenExpiryTime && this.tokenExpiryTime.getTime() < Date.now()) {
+            this.updateStatus('error', 'ลิงก์หมดอายุแล้ว', 'เวลาการเข้าถึง Form หมดอายุตามการตั้งค่าส่วนกลาง โปรดติดต่อ Admin');
+            this.retryButton.style.display = 'flex';
+            return;
+        }
+
+        // 🔴 NEW: 2. สร้าง Pseudo-Token และ Timestamp
+        const currentTimestamp = Date.now();
+        // ใช้ Timestamp เป็น Token เพื่อระบุว่าการเข้าถึงเกิดขึ้นเมื่อใด (เปลี่ยนเป็นเลขฐาน 36 เพื่อความสั้น)
+        const pseudoToken = currentTimestamp.toString(36); 
+        
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             
+            // 🔴 NEW: 3. เพิ่ม Token และ Timestamp เข้าไปใน URL ปลายทาง
+            let finalUrl = this.target.url;
+            
+            // 💡 สำคัญ: ถ้า target.url คือ Google Form ให้ใช้รูปแบบ pre-filled field
+            if (finalUrl.includes('google.com/forms/')) {
+                 // ตรวจสอบว่า URL มีเครื่องหมาย ? หรือไม่
+                 const separator = finalUrl.includes('?') ? '&' : '?';
+                 
+                 // 🚨 LOGIC ใหม่: กำหนด Field ID ตาม URL ปลายทาง
+                 let TOKEN_FIELD_ID = '';
+                 let TIMESTAMP_FIELD_ID = '';
+                 
+                 // 🎯 Form 1 (Studio 3 - Forms ID ที่คุณให้มา) 
+                 if (finalUrl.includes('1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww')) {
+                     TOKEN_FIELD_ID = 'entry.2084859674'; 
+                     TIMESTAMP_FIELD_ID = 'entry.1465967331';
+                 } 
+                 // 🎯 Form 2 (Studio 5)
+                 else if (finalUrl.includes('1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA')) {
+                     TOKEN_FIELD_ID = 'entry.736609822'; 
+                     TIMESTAMP_FIELD_ID = 'entry.827398466';
+                 }
+                 // 🎯 Form 3 (Studio 4)
+                 else if (finalUrl.includes('1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA')) {
+                     TOKEN_FIELD_ID = 'entry.522425491'; 
+                     TIMESTAMP_FIELD_ID = 'entry.147300429'; 
+                 } 
+                 // 🎯 Form 4 (Studio 2)
+                 else if (finalUrl.includes('1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA')) {
+                     TOKEN_FIELD_ID = 'entry.988532248'; 
+                     TIMESTAMP_FIELD_ID = 'entry.1166641522';
+                 } 
+                 // 🎯 Form 5 (Studio 1)
+                 else if (finalUrl.includes('1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw')) {
+                     TOKEN_FIELD_ID = 'entry.1207357982'; 
+                     TIMESTAMP_ID = 'entry.25177657'; 
+                 } 
+                 // 🛑 ค่าเริ่มต้น: หากไม่พบ Forms ID ที่ตรงกัน ให้ใช้ Field ID ของ Studio 3
+                 else {
+                      console.warn("Forms ID not matched, using default Field IDs (Studio 3).");
+                      TOKEN_FIELD_ID = 'entry.2084859674'; 
+                      TIMESTAMP_ID = 'entry.1465967331';
+                 }
+
+
+                 finalUrl += `${separator}${TOKEN_FIELD_ID}=${pseudoToken}&${TIMESTAMP_FIELD_ID}=${currentTimestamp}`;
+            }
+
             // Redirect หลังแสดงผลสำเร็จ 2 วินาที (ใช้ GEOFENCE_STATUS_DELAY_MS อีกครั้งสำหรับการเปลี่ยนหน้า)
             this.geofenceTimeoutId = setTimeout(() => {
-                 // 🟢 Redirect สุดท้ายไปยัง URL ปลายทาง (จำเป็นสำหรับการทำงาน)
-                 window.open(this.target.url, '_self'); 
+                 // 🟢 ใช้ finalUrl ที่มี Token
+                 window.open(finalUrl, '_self'); 
             }, this.GEOFENCE_STATUS_DELAY_MS); 
 
         } else {
