@@ -1056,11 +1056,11 @@ class GeofenceApp {
             // Note: ต้อง encodeURIComponent(this.target.url) เพื่อป้องกันปัญหา URL
             const finalUrl = `${PROXY_PAGE_URL}?formsId=${targetFormsId}&token=${pseudoToken}&timestamp=${currentTimestamp}&redirectUrl=${encodeURIComponent(this.target.url)}`;
 
-            // Redirect หลังแสดงผลสำเร็จ 2 วินาที
-            this.geofenceTimeoutId = setTimeout(() => {
-                 // 🛑 ใช้ window.location.replace() เพื่อบังคับเปลี่ยนหน้าในแท็บปัจจุบัน
-                 window.location.replace(finalUrl); 
-            }, this.GEOFENCE_STATUS_DELAY_MS); 
+            // 🛑 แก้ไข: ลบ setTimeout ออก และใช้ window.location.replace ทันที
+            window.location.replace(finalUrl); 
+            
+            // 🛑 สำคัญ: ต้องใส่ return เพื่อหยุดการทำงานของโค้ดส่วนอื่น ๆ ใน GeoSuccess
+            return; 
 
         } else {
             const maxMeters = this.target.dist * 1000;
