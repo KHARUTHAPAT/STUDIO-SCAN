@@ -1045,10 +1045,11 @@ class GeofenceApp {
             
             // 3. ตรวจสอบว่าดึง Forms ID ได้สำเร็จหรือไม่
             if (!targetFormsId) {
+                 // 🛑 แสดง Error ทันที
                  console.error("Fatal Error: Could not extract Forms ID from target URL:", this.target.url);
                  this.updateStatus('error', 'ข้อผิดพลาด URL', 'ไม่สามารถแยก Forms ID จากลิงก์ปลายทางได้');
                  this.retryButton.style.display = 'flex';
-                 return;
+                 return; // หยุดการทำงานของ GeoSuccess
             }
 
 
@@ -1056,10 +1057,10 @@ class GeofenceApp {
             // Note: ต้อง encodeURIComponent(this.target.url) เพื่อป้องกันปัญหา URL
             const finalUrl = `${PROXY_PAGE_URL}?formsId=${targetFormsId}&token=${pseudoToken}&timestamp=${currentTimestamp}&redirectUrl=${encodeURIComponent(this.target.url)}`;
 
-            // 🛑 แก้ไข: ลบ setTimeout ออก และใช้ window.location.replace ทันที
+            // 🛑 การแก้ไขขั้นเด็ดขาด: ใช้ window.location.replace() ทันที
             window.location.replace(finalUrl); 
             
-            // 🛑 สำคัญ: ต้องใส่ return เพื่อหยุดการทำงานของโค้ดส่วนอื่น ๆ ใน GeoSuccess
+            // 🛑 สำคัญ: return เพื่อหยุดการทำงานของ GeoSuccess และหยุด Flow Control ของแอปพลิเคชัน
             return; 
 
         } else {
