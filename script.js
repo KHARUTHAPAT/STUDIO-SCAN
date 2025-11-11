@@ -90,9 +90,6 @@ class GeofenceApp {
         this.geofenceConfig = {}; 
         this.announcementConfig = {}; 
         
-        // ❌ REMOVED: ไม่ต้องใช้ M8 ใน JS แล้ว
-        this.tokenExpiryTime = null; 
-        
         this.target = { lat: null, lon: null, dist: null, url: null };
 
         this.isBypassMode = false;
@@ -506,10 +503,7 @@ class GeofenceApp {
         }
     }
     
-    // ❌ REMOVED: ลบฟังก์ชัน fetchTokenExpiryFromSheet() ออก
-    
     async loadInitialConfig() {
-        // ❌ REMOVED: ลบ tokenExpiryTime ออกจาก Promise.all
         const [studioList, geofenceConfig, announcementConfig, adminUsers] = await Promise.all([
             this.fetchStudioListFromSheet(),
             this.fetchGeofenceConfigFromSheet(),
@@ -522,7 +516,6 @@ class GeofenceApp {
         this.announcementConfig = announcementConfig;
         // 🔴 NEW: เก็บข้อมูล Admin ที่ดึงมา
         this.ADMIN_USERS = adminUsers;
-        // ❌ REMOVED: ไม่ต้องเก็บค่า M8 แล้ว
         this.tokenExpiryTime = null; 
         
         if (this.ADMIN_USERS.length === 0) {
@@ -998,23 +991,18 @@ class GeofenceApp {
         this.updateStatus('loading', `กำลังตรวจสอบตำแหน่ง ${this.studioName}...`, 'โปรดอนุญาตการเข้าถึง GPS เพื่อดำเนินการต่อ');
         this.retryButton.style.display = 'none'; 
         
-        // --- ขั้นตอนที่ 1: รอ 2 วินาที (Loading Delay) ---
-        this.geofenceTimeoutId = setTimeout(() => {
-            
-            // 2. เรียกใช้ Geolocation API (หลังจาก 2 วินาที)
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => this.geoSuccess(position), 
-                    (error) => this.geoError(error), 
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
-                );
-            } else {
-                this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
-                // 🔴 NEW: แสดงปุ่ม Retry ทันที (ไม่ต้องรอ delay ซ้ำ)
-                this.retryButton.style.display = 'flex';
-            }
-            
-        }, this.GEOFENCE_STATUS_DELAY_MS);
+        // 🛑 NEW FLOW: เรียกใช้ Geolocation API ทันที
+        if (navigator.geolocation) {
+            // ไม่ต้องหน่วงเวลา 2 วินาทีแล้ว เรียก getCurrentPosition ทันที
+            navigator.geolocation.getCurrentPosition(
+                (position) => this.geoSuccess(position), 
+                (error) => this.geoError(error), 
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 } 
+            );
+        } else {
+            this.updateStatus('error', 'เบราว์เซอร์ไม่รองรับ', 'โทรศัพท์ของคุณไม่รองรับ Geolocation หรือไม่ได้เปิด GPS');
+            this.retryButton.style.display = 'flex';
+        }
     }
     
     geoSuccess(position) {
@@ -1023,45 +1011,16 @@ class GeofenceApp {
         const distance = this.calculateDistance(this.target.lat, this.target.lon, userLat, userLon);
         const distanceMeters = (distance * 1000).toFixed(0);
         
-        // 🔴 NEW: 1. สร้าง Pseudo-Token และ Timestamp
-        const currentTimestamp = Date.now();
-        // ใช้ Timestamp เป็น Token เพื่อระบุว่าการเข้าถึงเกิดขึ้นเมื่อใด (เปลี่ยนเป็นเลขฐาน 36 เพื่อความสั้น)
-        const pseudoToken = currentTimestamp.toString(36); 
-        
         if (distance <= this.target.dist) {
-            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (กำลังเปิด Form...)`);
+            this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             
-            // 🚨 NEW LOGIC: เปลี่ยนปลายทางเป็น Proxy Page
-            // 1. กำหนด URL ของ Proxy Page (ต้องแน่ใจว่าชื่อไฟล์ถูกต้อง)
-            const PROXY_PAGE_URL = window.location.origin + window.location.pathname.replace('index.html', 'token-validator.html');
+            // 🚨 แก้ไขให้ Redirect ไปที่ลิงก์ปลายทาง (คอลัมน์ B) ทันที
+            // ใช้ setTimeout 2 วินาที ตาม Logic เดิมที่คุณต้องการ
+            this.geofenceTimeoutId = setTimeout(() => {
+                 window.open(this.target.url, '_self'); 
+            }, this.GEOFENCE_STATUS_DELAY_MS); 
             
-            let targetFormsId = '';
-            
-            // 2. ใช้ Match เพื่อดึง Forms ID (ID ยาว ๆ) จาก URL ปลายทาง
-            const formIdMatch = this.target.url.match(/forms\/d\/e\/([a-zA-Z0-9_-]+)/);
-            if (formIdMatch && formIdMatch[1]) {
-                targetFormsId = formIdMatch[1];
-            }
-            
-            // 3. ตรวจสอบว่าดึง Forms ID ได้สำเร็จหรือไม่
-            if (!targetFormsId) {
-                 // 🛑 แสดง Error ทันที
-                 console.error("Fatal Error: Could not extract Forms ID from target URL:", this.target.url);
-                 this.updateStatus('error', 'ข้อผิดพลาด URL', 'ไม่สามารถแยก Forms ID จากลิงก์ปลายทางได้');
-                 this.retryButton.style.display = 'flex';
-                 return; // หยุดการทำงานของ GeoSuccess
-            }
-
-
-            // 4. สร้างลิงก์ไปยัง Proxy Page (พร้อมแนบ Token และ Forms ID)
-            // Note: ต้อง encodeURIComponent(this.target.url) เพื่อป้องกันปัญหา URL
-            const finalUrl = `${PROXY_PAGE_URL}?formsId=${targetFormsId}&token=${pseudoToken}&timestamp=${currentTimestamp}&redirectUrl=${encodeURIComponent(this.target.url)}`;
-
-            // 🛑 การแก้ไขขั้นเด็ดขาด: ใช้ window.location.replace() ทันที
-            window.location.replace(finalUrl); 
-            
-            // 🛑 สำคัญ: return เพื่อหยุดการทำงานของ GeoSuccess และหยุด Flow Control ของแอปพลิเคชัน
-            return; 
+            return; // สำคัญ: หยุดการทำงานของ GeoSuccess
 
         } else {
             const maxMeters = this.target.dist * 1000;
