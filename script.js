@@ -205,7 +205,8 @@ class GeofenceApp {
     _onAnnouncementButtonClick = (event) => {
         const url = event.currentTarget.getAttribute('data-url');
         if (url) {
-            window.open(url, '_blank');
+            // 🔴 เปลี่ยนเป็นเปิดในแท็บปัจจุบัน (_self) เพื่อ 'คลุม' ลิงก์ไว้ในเว็บไซต์นี้
+            window.open(url, '_self'); 
         }
     }
     
@@ -636,7 +637,8 @@ class GeofenceApp {
             `;
 
             studioButton.addEventListener('click', () => {
-                window.open(fullLink, '_blank'); 
+                // 🔴 เปลี่ยนเป็นเปิดในแท็บปัจจุบัน (_self) เพื่อ 'คลุม' ลิงก์ไว้ในเว็บไซต์นี้
+                window.open(fullLink, '_self'); 
             });
             
             itemContainer.appendChild(studioButton);
