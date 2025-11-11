@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ตรวจสอบสิทธิ์เข้า Form</title>
-    <link rel="stylesheet" href="style.css"> 
     <style>
         /* CSS สำหรับหน้าตรวจสอบ */
         body {
@@ -44,6 +43,7 @@
             height: 40px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
+            display: none; /* ซ่อนไว้ก่อน */
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -69,6 +69,7 @@
     
     // 🚨 ข้อมูล Field ID ทั้งหมด (จำเป็นต้องซ้ำกับ JS/Apps Script)
     const FIELD_MAP = {
+      // Forms ID (URL ID) : { Token Field ID, Timestamp Field ID }
       '1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww': { TOKEN: 'entry.2084859674', TIMESTAMP: 'entry.1465967331' }, // Studio 3
       '1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA': { TOKEN: 'entry.736609822', TIMESTAMP: 'entry.827398466' }, // Studio 5
       '1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA': { TOKEN: 'entry.522425491', TIMESTAMP: 'entry.147300429' }, // Studio 4
@@ -82,12 +83,13 @@
         const config = FIELD_MAP[formsId];
 
         document.getElementById('loader').style.display = 'none';
+        document.getElementById('statusTitle').style.color = '#f8fafc'; // Reset color
 
-        // 1. ตรวจสอบว่ามี Token, Timestamp และ Forms ID ครบหรือไม่
+        // 1. ตรวจสอบว่ามี Token, Timestamp และ Forms ID ครบหรือไม่ (กรณีแชร์ลิงก์ Form โดยตรงที่ไม่มีพารามิเตอร์)
         if (!token || !timestamp || !formsId || isNaN(tokenCreationTime) || !config) {
             document.getElementById('statusTitle').innerText = 'เข้าถึงถูกปฏิเสธ';
             document.getElementById('statusMessage').innerText = 'ลิงก์การเข้าถึงไม่สมบูรณ์ หรือไม่มีสิทธิ์เข้าถึงโดยตรง';
-            document.getElementById('statusTitle').style.color = '#ef4444';
+            document.getElementById('statusTitle').style.color = '#ef4444'; // แดง
             return;
         }
 
@@ -95,25 +97,27 @@
         if (currentTime - tokenCreationTime > EXPIRY_TIME_MS) {
             document.getElementById('statusTitle').innerText = 'ลิงก์หมดอายุ';
             document.getElementById('statusMessage').innerText = 'ลิงก์เข้าสู่ Form หมดอายุแล้ว (เกิน 5 นาที) โปรดเข้าใหม่จากหน้า Studio หลัก';
-            document.getElementById('statusTitle').style.color = '#f97316'; /* ส้ม */
+            document.getElementById('statusTitle').style.color = '#f97316'; // ส้ม
             return;
         }
         
         // 3. ถ้าผ่านทั้งหมด: Redirect ไปยัง Form จริง (พร้อมแนบ Token/Timestamp ไปด้วย)
         document.getElementById('statusTitle').innerText = 'กำลังเปลี่ยนเส้นทาง...';
         document.getElementById('statusMessage').innerText = 'ระบบจะนำท่านไปยัง Google Form ทันที';
-        document.getElementById('statusTitle').style.color = '#10b981'; /* เขียว */
+        document.getElementById('statusTitle').style.color = '#10b981'; // เขียว
         document.getElementById('loader').style.display = 'block';
 
+        // สร้างลิงก์ Form Response ที่ถูกต้อง
         const finalFormUrl = `${decodeURIComponent(redirectUrl)}?entry.${config.TOKEN}=${token}&entry.${config.TIMESTAMP}=${timestamp}`;
         
         // ใช้ setTimeout เพื่อให้ผู้ใช้เห็นสถานะกำลัง Redirect ก่อนเปลี่ยนหน้า
         setTimeout(() => {
+             // 💡 Note: เราใช้ window.location.replace เพื่อให้ไม่มี History กลับมา
              window.location.replace(finalFormUrl);
         }, 500); 
     }
 
-    // แสดงสถานะ Loading ก่อนเริ่มตรวจสอบ
+    // เริ่มตรวจสอบเมื่อโหลดหน้า
     document.getElementById('loader').style.display = 'block';
     validateToken();
 </script>
