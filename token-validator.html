@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตรวจสอบสิทธิ์เข้า Form</title>
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* CSS สำหรับหน้าตรวจสอบ */
+        body {
+            background-color: #0a0a0f; 
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+        }
+        .status-card {
+            background: rgba(15, 15, 20, 0.95); 
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 20px;
+            padding: 40px 32px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #ef4444; /* แดงสำหรับ Error */
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #94a3b8;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        .loader {
+            border: 4px solid #3b82f6; 
+            border-top: 4px solid #f8fafc; 
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-card" id="statusCard">
+        <div class="loader" id="loader"></div>
+        <h1 id="statusTitle">กำลังตรวจสอบสิทธิ์...</h1>
+        <p id="statusMessage">โปรดรอสักครู่ ระบบกำลังยืนยันความถูกต้องของลิงก์</p>
+    </div>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const timestamp = params.get('timestamp');
+    const formsId = params.get('formsId');
+    const redirectUrl = params.get('redirectUrl');
+
+    const EXPIRY_TIME_MS = 5 * 60 * 1000; // 5 นาที
+    
+    // 🚨 ข้อมูล Field ID ทั้งหมด (จำเป็นต้องซ้ำกับ JS/Apps Script)
+    const FIELD_MAP = {
+      '1FAIpQLSc34HgQvjAhusHI1fq9PKCLiymeBfMTvYxUosVTpz5nc8S_ww': { TOKEN: 'entry.2084859674', TIMESTAMP: 'entry.1465967331' }, // Studio 3
+      '1FAIpQLScDVnvWKbCH9KVhDiXL6ruig1v7tk5YoiuFih-qktpYMpjBKA': { TOKEN: 'entry.736609822', TIMESTAMP: 'entry.827398466' }, // Studio 5
+      '1FAIpQLSdzL91KTLiIvqxnEbmRTNXvIVytvWEIMTODjHkFOp5ReWJQDA': { TOKEN: 'entry.522425491', TIMESTAMP: 'entry.147300429' }, // Studio 4
+      '1FAIpQLSeb1wq4YRhkEAZvP0-Vx3ENjiDUBX399QfWayuOKjZWw7J1tA': { TOKEN: 'entry.988532248', TIMESTAMP: 'entry.1166641522' }, // Studio 2
+      '1FAIpQLScl6CyhhYHiC8CxjxWlHFDKqBsu5iOt12mo5v1-NhB5CGUlAw': { TOKEN: 'entry.1207357982', TIMESTAMP: 'entry.25177657' }  // Studio 1
+    };
+
+    function validateToken() {
+        const currentTime = Date.now();
+        const tokenCreationTime = parseInt(timestamp);
+        const config = FIELD_MAP[formsId];
+
+        document.getElementById('loader').style.display = 'none';
+
+        // 1. ตรวจสอบว่ามี Token, Timestamp และ Forms ID ครบหรือไม่
+        if (!token || !timestamp || !formsId || isNaN(tokenCreationTime) || !config) {
+            document.getElementById('statusTitle').innerText = 'เข้าถึงถูกปฏิเสธ';
+            document.getElementById('statusMessage').innerText = 'ลิงก์การเข้าถึงไม่สมบูรณ์ หรือไม่มีสิทธิ์เข้าถึงโดยตรง';
+            document.getElementById('statusTitle').style.color = '#ef4444';
+            return;
+        }
+
+        // 2. ตรวจสอบอายุของ Token (5 นาที)
+        if (currentTime - tokenCreationTime > EXPIRY_TIME_MS) {
+            document.getElementById('statusTitle').innerText = 'ลิงก์หมดอายุ';
+            document.getElementById('statusMessage').innerText = 'ลิงก์เข้าสู่ Form หมดอายุแล้ว (เกิน 5 นาที) โปรดเข้าใหม่จากหน้า Studio หลัก';
+            document.getElementById('statusTitle').style.color = '#f97316'; /* ส้ม */
+            return;
+        }
+        
+        // 3. ถ้าผ่านทั้งหมด: Redirect ไปยัง Form จริง (พร้อมแนบ Token/Timestamp ไปด้วย)
+        document.getElementById('statusTitle').innerText = 'กำลังเปลี่ยนเส้นทาง...';
+        document.getElementById('statusMessage').innerText = 'ระบบจะนำท่านไปยัง Google Form ทันที';
+        document.getElementById('statusTitle').style.color = '#10b981'; /* เขียว */
+        document.getElementById('loader').style.display = 'block';
+
+        const finalFormUrl = `${decodeURIComponent(redirectUrl)}?entry.${config.TOKEN}=${token}&entry.${config.TIMESTAMP}=${timestamp}`;
+        
+        // ใช้ setTimeout เพื่อให้ผู้ใช้เห็นสถานะกำลัง Redirect ก่อนเปลี่ยนหน้า
+        setTimeout(() => {
+             window.location.replace(finalFormUrl);
+        }, 500); 
+    }
+
+    // แสดงสถานะ Loading ก่อนเริ่มตรวจสอบ
+    document.getElementById('loader').style.display = 'block';
+    validateToken();
+</script>
+</body>
+</html>
