@@ -1014,8 +1014,7 @@ class GeofenceApp {
         if (distance <= this.target.dist) {
             this.updateStatus('success', 'ยืนยันตำแหน่งสำเร็จ!', `ระยะทาง: ${distanceMeters} เมตร (นำไปสู่แบบฟอร์ม...)`);
             
-            // 🚨 แก้ไขให้ Redirect ไปที่ลิงก์ปลายทาง (คอลัมน์ B) ทันที
-            // ใช้ setTimeout 2 วินาที ตาม Logic เดิมที่คุณต้องการ
+            // 🚨 การแก้ไข: ใช้ setTimeout 2 วินาที ก่อน Redirect ไปยัง URL ปลายทาง
             this.geofenceTimeoutId = setTimeout(() => {
                  window.open(this.target.url, '_self'); 
             }, this.GEOFENCE_STATUS_DELAY_MS); 
@@ -1026,8 +1025,10 @@ class GeofenceApp {
             const maxMeters = this.target.dist * 1000;
             this.updateStatus('error', 'เข้าถึงถูกปฏิเสธ', `คุณอยู่ห่าง ${distanceMeters} เมตร (เกิน ${maxMeters} เมตร) โปรดลองใหม่อีกครั้งในพื้นที่ที่กำหนด`);
             
-            // แสดงปุ่ม Retry ทันที
-            this.retryButton.style.display = 'flex';
+            // 🔴 แก้ไข: หน่วงเวลา 2 วินาที ก่อนแสดงปุ่ม Retry 🔴
+            this.geofenceTimeoutId = setTimeout(() => {
+                this.retryButton.style.display = 'flex';
+            }, this.GEOFENCE_STATUS_DELAY_MS); 
         }
     }
     
@@ -1037,7 +1038,6 @@ class GeofenceApp {
 
         this._setRetryToGeolocationCheck(); 
         
-        // 🔴 NEW: ไม่ต้องหน่วงเวลาซ้ำ 2 วินาที
         if (error.code === 1) {
             errorMessage += ' (ถูกปฏิเสธ)';
         } else if (error.code === 2) {
@@ -1048,8 +1048,10 @@ class GeofenceApp {
         
         this.updateStatus('error', errorMessage, customMessage);
         
-        // แสดงปุ่ม Retry ทันที
-        this.retryButton.style.display = 'flex'; 
+        // 🔴 แก้ไข: หน่วงเวลา 2 วินาที ก่อนแสดงปุ่ม Retry 🔴
+        this.geofenceTimeoutId = setTimeout(() => {
+            this.retryButton.style.display = 'flex';
+        }, this.GEOFENCE_STATUS_DELAY_MS); 
     }
     
     calculateDistance(lat1, lon1, lat2, lon2) {
