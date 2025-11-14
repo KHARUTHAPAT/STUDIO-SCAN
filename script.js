@@ -325,6 +325,7 @@ class GeofenceApp {
              this.announcementImage.style.display = 'block';
              
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+             // 🟢 เรียก startCloseButtonControl() หลังจากภาพแสดงผล
              this.startCloseButtonControl(postAction);
         });
 
@@ -339,6 +340,7 @@ class GeofenceApp {
              this.modalLoader.style.display = 'none';
              
              const postAction = this.announcementModalOverlay.getAttribute('data-post-action');
+             // 🟢 เรียก startCloseButtonControl() แม้ภาพจะโหลดล้มเหลว
              this.startCloseButtonControl(postAction);
 
              if (this.announcementActionArea.style.display === 'none') { 
@@ -704,6 +706,7 @@ class GeofenceApp {
 
                      // 2. หากยังไม่มีภาพ (แสดงว่าโหลดไม่ทัน) ให้ไปควบคุมปุ่มปิดเลย
                      if (this.announcementImage.style.display === 'none') {
+                         // 🟢 เรียก startCloseButtonControl() เมื่อเกิด Timeout
                          this.startCloseButtonControl(action);
                      }
                 }
@@ -829,10 +832,12 @@ class GeofenceApp {
         if (hasImage) {
             this.announcementImage.src = fullImageUrl; 
         } else {
+            // 🔴 FIX: ถ้าไม่มีภาพ ให้ซ่อน Loader และไปควบคุมปุ่มปิดทันที
             this.modalLoader.style.display = 'none'; 
             if (this.modalLoaderText) this.modalLoaderText.style.display = 'none';
             this.announcementModalOverlay.classList.remove('initial-show'); 
-            // ถ้าไม่มีภาพ ให้ไปควบคุมปุ่มปิดทันที (อาจมีแค่ปุ่ม Action)
+            
+            // 🟢 การเปลี่ยนแปลง: เรียก startCloseButtonControl ตรงนี้ถ้าไม่มีภาพ
             this.startCloseButtonControl(action); 
         }
         
